@@ -302,6 +302,29 @@ Track each feature here. Only mark ✅ when tested on physical device (Poco X5 P
 
 ---
 
+### [EXECUTION — Step 2] — Git repository + LFS setup complete, pushed to GitHub
+
+**Status:** ✅ DONE. Repo live at https://github.com/DevAyyub/AnatomiQ (private, branch `main`).
+**What was done (in order):**
+- `git lfs install` run (one-time, this machine). Git identity configured (DevAyyub).
+- `.gitignore` + `.gitattributes` committed FIRST (commit `9ff97e7`), before any other file — preserves the LFS-before-binary ordering rule from Build Environment B.1.
+- LFS armed and verified: `git check-attr filter -- test.blend` → reported `filter: lfs` before any binary was committed (B.8). Full pattern list confirmed via `git lfs track`.
+- README + LICENSE (CC BY-SA 4.0 + Z-Anatomy/BodyParts3D attribution) + `docs/` structure committed (`0351936`).
+- All 12 planning documents committed to `docs/` (`e4d52b9`), then pushed to GitHub.
+**License note:** Repo-wide CC BY-SA 4.0 chosen to satisfy the ShareAlike obligation inherited from the Z-Anatomy source data (CC BY-SA 2.1 JP). 4.0 is a CC-sanctioned upgrade target for 2.x derivatives (verified against Creative Commons' published ShareAlike compatibility rules). Caveat recorded in LICENSE: CC licenses are not ideal for software — if the project goes commercial, revisit with a code/assets dual-license split (e.g. MIT/Apache-2.0 for C#, CC BY-SA retained for meshes) plus legal review. Not a concern for the academic build.
+**Everyday workflow from here:** `git add .` → `git commit -m "..."` → `git push`.
+
+---
+
+### [EXECUTION — Step 2] — `.docx` files migrated to LFS (caveat found + resolved)
+
+**Caveat:** The original `.gitattributes` had no `*.docx` rule, so the two Word planning docs (`AnatomiQ_Features_Document.docx`, `AnatomiQ_Project_Overview.docx`) first committed as regular Git binary (`e4d52b9`). Harmless at their size (~few hundred KB), but inconsistent with the all-binaries-to-LFS intent and wasteful if they're revised often.
+**Fix:** Added `*.docx` to `.gitattributes` (`d46375a`), then re-staged + committed the two existing files to actually convert them (`1276608`). Confirmed via `git lfs ls-files` — both now listed and uploaded through the LFS channel on push.
+**Lesson (forward rule):** Adding an LFS rule for a file type *already committed* takes TWO commits: (1) commit the `.gitattributes` rule, then (2) `git add` + commit the files themselves to convert them. `git lfs migrate import --no-rewrite` is the documented alternative but refuses on a dirty working tree — for a solo repo, a normal re-commit is simpler. When introducing ANY new binary type, add its `.gitattributes` rule and verify with `git check-attr` BEFORE the first file of that type is committed, and confirm afterward with `git lfs ls-files`.
+**LFS quota reminder:** GitHub free tier ~1 GB storage / 1 GB bandwidth per month. Reserve it for `.blend`/`.glb`/`.onnx`; don't push Blender autosaves. Fallbacks if hit: $5/mo 50 GB data pack, or GitLab (10 GB free). (Build Environment B.7)
+
+---
+
 ## Bugs & Fixes
 
 *Log every significant bug here — what it was, what caused it, how it was fixed. Format: Feature → Symptom → Cause → Fix.*
@@ -364,7 +387,7 @@ Track each feature here. Only mark ✅ when tested on physical device (Poco X5 P
 | ID | Risk | Status | Action needed |
 |---|---|---|---|
 | R1 | Medical reviewer unavailable | 🟡 Open | Identify reviewer before Phase 1 ends |
-| R2 | Hardware failure | 🟢 Mitigated | Backup strategy + git backups |
+| R2 | Hardware failure | 🟢 Mitigated | Backup strategy + git backups (GitHub repo now live) |
 | R3 | API disruption | 🟢 Mitigated | Provider-agnostic architecture |
 | R4 | Package breakage | 🟢 Mitigated | Lock versions in manifest.json |
 | R5 | Scope creep | 🔴 **Active vigilance** | Demo run-of-show defines scope. No exceptions. |
@@ -417,7 +440,7 @@ Track each feature here. Only mark ✅ when tested on physical device (Poco X5 P
 | Procedure schema (CADENCE-001) | 🟡 DEFERRED to Phase 3 start | Half-day schema design at Phase 3 start |
 | Symptom pattern schema (PRISM-001) | 🟡 DEFERRED to Phase 3 start | Half-day schema design at Phase 3 start |
 | Workstation setup (JDK/NDK/SDK versions) | ✅ RESOLVED | JDK 17, NDK r27c, SDK 36.0.0 — install via Unity Hub |
-| Git LFS strategy | ✅ RESOLVED | Configured before first binary commit; full .gitattributes ready |
+| Git LFS strategy | ✅ DONE | Repo live on GitHub; LFS armed + verified before first binary; `.docx` added to LFS. See [EXECUTION — Step 2] entries |
 | Localization technical approach | ✅ RESOLVED | Unity Localization package from day one |
 | Cross-cutting service access pattern | ✅ RESOLVED | ServiceRegistry ScriptableObject with interfaces |
 | ATLAS-006 ONNX model sourcing | 🟢 INTENTIONALLY DEFERRED | Research at start of ATLAS-006 chat (state changes) |
@@ -425,4 +448,4 @@ Track each feature here. Only mark ✅ when tested on physical device (Poco X5 P
 
 ---
 
-*Last updated: planning phase complete + gap-fill rounds complete + build-environment round complete · ready for scaffold chat*
+*Last updated: planning complete + gap-fill + build-environment rounds complete · Step 2 (Git & source control) DONE — repo live on GitHub · ready for Step 4 (Unity scaffold chat)*
