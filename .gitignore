@@ -1,0 +1,72 @@
+# ========== Unity ==========
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Mm]emoryCaptures/
+[Uu]ser[Ss]ettings/
+
+# Asset metadata that should not be committed
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+
+# Unity3D generated meta files
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Unity3D generated file on crash reports
+sysinfo.txt
+
+# Builds
+*.apk
+*.aab
+*.unitypackage
+*.app
+
+# Crashlytics
+crashlytics-build.properties
+
+# ========== IDEs ==========
+.vs/
+.vscode/
+.idea/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+
+# ========== OS ==========
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ========== AnatomiQ-specific ==========
+# API keys must NEVER be committed
+secrets.json
+api_keys.json
+.env
+.env.local
+*.apikey
+
+# Local-only profiling data
+ProfilerCaptures/
+PerformanceLogs/
+
+# Blender autosave files
+*.blend1
+*.blend2
+*.blend@
+
+# Inference Engine model staging
+InferenceModels/_staging/
