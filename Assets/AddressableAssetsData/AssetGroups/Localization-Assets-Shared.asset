@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: Localization-Assets-Shared
+  m_EditorClassIdentifier: Unity.Addressables.Editor::UnityEditor.AddressableAssets.Settings.AddressableAssetGroup
+  m_GroupName: Localization-Assets-Shared
+  m_GUID: e6cba4db206be674896cc06118ede360
+  m_SerializeEntries:
+  - m_GUID: 2fcea04e3a9af0d46b9d14415ce185a4
+    m_Address: Assets/_AnatomiQ/Localization/Tables/DiseaseContent Shared Data.asset
+    m_ReadOnly: 1
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 37a02bf9335958f498deb126502affe4
+    m_Address: Assets/_AnatomiQ/Localization/Tables/UIStrings Shared Data.asset
+    m_ReadOnly: 1
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8506c6f8839d08a479ef15c4066cfaa9
+    m_Address: Assets/_AnatomiQ/Localization/Tables/OrganNames Shared Data.asset
+    m_ReadOnly: 1
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  m_ReadOnly: 1
+  m_Settings: {fileID: 11400000, guid: 3b342895919a5684ab18772917e87e3a, type: 2}
+  m_SchemaSet:
+    m_Schemas:
+    - {fileID: 11400000, guid: ce2b6bf866e45164080626ecef51a348, type: 2}
+    - {fileID: 11400000, guid: 142261a341ae6b947bfab333e9b8e6e3, type: 2}
