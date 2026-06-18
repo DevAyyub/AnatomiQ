@@ -1,7 +1,7 @@
 {
-    "name": "AnatomiQ.AI",
-    "rootNamespace": "AnatomiQ.AI",
-    "references": ["AnatomiQ.Core", "AnatomiQ.Data", "Unity.InferenceEngine"],
+    "name": "AnatomiQ.Anatomy",
+    "rootNamespace": "AnatomiQ.Anatomy",
+    "references": ["AnatomiQ.Core", "AnatomiQ.Data"],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

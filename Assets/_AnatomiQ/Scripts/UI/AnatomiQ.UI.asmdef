@@ -1,11 +1,7 @@
 {
     "name": "AnatomiQ.UI",
     "rootNamespace": "AnatomiQ.UI",
-    "references": [
-        "AnatomiQ.Core",
-        "AnatomiQ.Data",
-        "Unity.Localization"
-    ],
+    "references": ["AnatomiQ.Core", "AnatomiQ.Data", "Unity.Localization"],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
