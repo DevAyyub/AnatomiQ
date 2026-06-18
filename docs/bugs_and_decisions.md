@@ -13,8 +13,8 @@ Track each feature here. Only mark ✅ when tested on physical device (Poco X5 P
 
 | Feature ID | Name | Status | Date |
 |---|---|---|---|
-| CORE-007 | Fallback & State Manager | ⬜ Not started | — |
-| CORE-008 | Data Layer & ScriptableObjects | ⬜ Not started | — |
+| CORE-007 | Fallback & State Manager | 🧪 Shell built (scaffold), not device-tested | 2026-06-18 |
+| CORE-008 | Data Layer & ScriptableObjects | 🧪 Schemas built (scaffold), not device-tested | 2026-06-18 |
 | CORE-001 | AR Session Manager | ⬜ Not started | — |
 | CORE-002 | 3D Body Model Renderer | ⬜ Not started | — |
 | CORE-003 | Layer Toggle System | ⬜ Not started | — |
@@ -325,6 +325,79 @@ Track each feature here. Only mark ✅ when tested on physical device (Poco X5 P
 
 ---
 
+
+### [EXECUTION — Steps 1–8] Unity scaffold chat — overview
+
+**Status:** ✅ DONE. Full project scaffold built across 8 gated sections, each compiled/tested in-editor and committed+pushed. Editor: Unity 6000.3.17f1 LTS. No feature logic written — structure, architecture, schemas, and settings only.
+**Sections:** (1) URP 3D project + folder tree, (2) packages + version lock, (3) Android build settings + URP mobile asset, (4) ARCore + AndroidManifest, (5) ServiceRegistry + interfaces + event bus, (6) CORE-007 FallbackManager shell, (7) data schemas, (8) Localization.
+**Gate policy:** every section ended in a compile/build/test gate before commit. Section 3 produced a clean APK (proving the IL2CPP/ARM64/Vulkan pipeline). Sections 5–8 verified via EditMode/PlayMode tests and editor checks (no device build needed).
+
+---
+
+### [EXECUTION — Step 4 scaffold] Verified package versions (web-checked June 2026)
+
+**Decision:** Pin the AR pair and confirm the moved/renamed packages at scaffold time rather than trusting planning-era numbers.
+**Verified:** AR Foundation **6.3.4** + Google ARCore XR Plugin **6.3.4** (matched pair — leaving version blank wrongly pulled 6.5.0, which targets Unity 6000.4/6000.5; downgraded to 6.3.4). Inference Engine `com.unity.ai.inference` **2.5.0** (namespace `Unity.InferenceEngine`; Package Manager display name may still read "Sentis"). Newtonsoft `com.unity.nuget.newtonsoft-json` **3.2.2** (auto-referenced; available to all asmdefs without explicit ref). Localization `com.unity.localization` **1.5.12**. Input System **1.19.0** (from template).
+**Note:** AR Foundation 6.3 deprecated URP Compatibility Mode → Render Graph required (aligns with the URP setting below).
+
+---
+
+### [EXECUTION — Step 4 scaffold] Assembly definition graph (DAG)
+
+**Decision:** One asmdef per module with name-based references, in a strict acyclic graph:
+`AnatomiQ.Data` (no app refs) ← `AnatomiQ.Core` (refs Data) ← pillars: `AnatomiQ.AR` (Core + Unity.XR.ARFoundation/ARSubsystems/CoreUtils), `AnatomiQ.Anatomy` (Core+Data), `AnatomiQ.AI` (Core+Data+Unity.InferenceEngine), `AnatomiQ.UI` (Core+Data+Unity.Localization). Pillars never reference each other.
+**Reason:** Enforces the "no tight coupling between pillar systems" rule at the compiler level and keeps build times incremental.
+
+---
+
+### [EXECUTION — Step 4 scaffold] Service registration is runtime, not serialized
+
+**Decision:** Services self-register into the `ServiceRegistry` asset at runtime (`_services.Register(this)` in `Awake`); ordering guaranteed by `[DefaultExecutionOrder]` — FallbackManager `-1000` (registers first), AppBootstrap `-500` (verifies readiness in `Start`).
+**Reason:** A ScriptableObject asset cannot persist serialized references to scene MonoBehaviours, so inspector-wiring services into the registry asset is impossible. Runtime registration + execution order is the clean alternative. Each service carries its own `[SerializeField] ServiceRegistry _services` (inspector-assigned). Registry clears on `OnEnable` so stale refs never leak between play sessions.
+**Event bus:** ScriptableObject `EventChannel<T>` pattern (generic base + `VoidEventChannel` + `AppStateEventChannel`), not a global singleton bus.
+**Initial AppState:** `AR_VIEWER_MODE` (safe 3D baseline) until monitoring logic promotes/demotes.
+
+---
+
+### [EXECUTION — Step 4 scaffold] URP wired to Android-Mobile pipeline asset
+
+**Decision:** Android Quality level set to **Mobile** → `Mobile_RPAsset`; `Mobile_RPAsset` also set as the Graphics **Default Render Pipeline** (filled the empty "None" footgun so any code path reading the default still gets URP). Renderer = Forward+, Depth Priming off.
+**Tuning (per performance budget):** HDR off, MSAA 2x, Render Scale 0.9, Depth Texture off, Opaque Texture off.
+**Render Graph:** confirmed active. In Unity 6.3 the "Compatibility Mode (Render Graph disabled)" toggle is deprecated and stripped — its **absence** is the confirmation Render Graph is on, which AR Foundation 6.3 requires. (Would need a `URP_COMPATIBILITY_MODE` scripting define to turn off — never do this.)
+**Build proof:** Section 3 produced a clean APK (IL2CPP, ARM64-only, Vulkan→OpenGLES3, Min API 29 / Target API 34).
+
+---
+
+### [EXECUTION — Step 4 scaffold] AndroidManifest scope — ARCore entries belong to the plug-in
+
+**Decision:** The custom `Assets/Plugins/Android/AndroidManifest.xml` declares ONLY what the ARCore plug-in does not inject: `CAMERA`, `INTERNET`, `ACCESS_NETWORK_STATE` permissions (+ an empty `<application tools:node="merge"/>` hook). It must NOT declare the `com.google.ar.core` meta-data or the `android.hardware.camera.ar` feature.
+**Reason:** With XR Plug-in Management ARCore = Required, the plug-in (`:arcore_client:`) auto-injects those at build time. Duplicating them fails the Gradle manifest merger (see Bugs). Source of truth for AR-required = XR Plug-in Management. Device-unsupported / permission-denied cases are handled in software by CORE-007 (3D Viewer Mode), not by weakening the manifest.
+
+---
+
+### [EXECUTION — Step 4 scaffold] IDataLayer decoupled from Core (cycle avoidance)
+
+**Decision:** `IDataLayer` lives in the `AnatomiQ.Data` assembly and does NOT extend `IService` or reference Core. It is registered through a dedicated `ServiceRegistry.RegisterDataLayer(IDataLayer)` entry point, not the generic `Register(IService)` path.
+**Reason:** Core already references Data (the registry exposes `IDataLayer DataLayer`). If `IDataLayer : IService` (IService lives in Core), Data would have to reference Core → circular assembly dependency, which Unity forbids. The compiler caught this during Section 5. The other service interfaces (`IFallbackManager`, `IAIOrchestrator`, `IBodyModelRenderer`) live in Core and do extend `IService`.
+
+---
+
+### [EXECUTION — Step 7 scaffold] Data schema implementation specifics
+
+**Decision:** `OrganAsset` and `DiseaseAsset` use **public fields** (not `_camelCase` private + properties).
+**Reason:** Deliberate exception for data ScriptableObjects — the planned JSON→SO importer and the inspector need to bind fields 1:1. The private-field/property coding standard applies to logic classes (MonoBehaviours), not data SOs (matches the C# in Data Schemas doc §2.6/§5).
+**v1.1 applied:** `OrganAsset.NodeType` (enum `NodeType { Anatomical, PhysiologicalState }`, defaults Anatomical) and `OrganAsset.FmaId` (string, nullable) added right after `DisplayName`, per Phase1 Medical Content Part A.
+**Added type:** `OrganMetadata { List<string> Sources; string LastReviewed; }` — implied by the JSON `metadata` object but not spelled out in the doc's C#.
+**Scope:** Only `OrganAsset` + `DiseaseAsset` scaffolded. Procedure/Symptom schemas remain deferred to Phase 3.
+
+---
+
+### [EXECUTION — Step 8 scaffold] Localization setup complete
+
+**Decision:** Localization Settings created; English (en) locale added and set as Project Locale Identifier; three String Table Collections created (`UIStrings`, `OrganNames`, `DiseaseContent`); `ui.app.name = "AnatomiQ"` entry added; **Android App Info** metadata configured (Display Name → `UIStrings/ui.app.name`).
+**Outcome:** Clears the recurring *"Android App Info has not been configured"* warning.
+**Confirmed rule (Build Env C.5):** cascade `narrationFallback` stays in JSON, NOT in localization tables — keeps medically-validated content editable by reviewers without re-review risk. `DiseaseContent` holds disease names/descriptions/stage labels, not cascade narrations.
+
 ## Bugs & Fixes
 
 *Log every significant bug here — what it was, what caused it, how it was fixed. Format: Feature → Symptom → Cause → Fix.*
@@ -342,7 +415,57 @@ Track each feature here. Only mark ✅ when tested on physical device (Poco X5 P
 
 -->
 
-*No bugs logged yet — project not started.*
+### [2026-06-18] — Scaffold/Build — Release APK fails: ARCore namespace used in multiple modules  ⚠️ DEFERRED → CORE-001
+
+**Symptom:** `File → Build` (release APK) fails at `:launcher:processReleaseMainManifest` — *"Manifest merger failed with multiple errors."* Full error: *"Namespace 'com.google.ar.core' is used in multiple modules and/or libraries: :arcore_client:, :unityandroidpermissions:."*
+**Cause (VERIFIED, not inferred):** Two of Unity's OWN bundled AAR modules (`:arcore_client:` and `:unityandroidpermissions:`) declare the same Gradle namespace. AGP under Unity 6.3.17 + Gradle 9.1.0 now enforces namespace uniqueness across modules; older AGP tolerated it. Confirmed by inspecting the generated manifests in `Library/Bee/Android/Prj/IL2CPP/Gradle/...` — our own `Assets/Plugins/Android/AndroidManifest.xml` is clean (camera+internet only) and merges fine; the clash is entirely between Unity's modules.
+**Status:** DEFERRED to CORE-001 (the first feature that needs a real AR scene on device). NOT blocking: Editor + Play Mode unaffected, and Section 3 already proved the IL2CPP/ARM64/Vulkan release pipeline builds a clean APK (before ARCore was enabled). Sections 5–8 are all editor/Play-Mode verifiable.
+**Planned fix:** Custom Main Gradle Template in Player Settings (Publishing Settings) to resolve the module namespace collision (assign a unique namespace / suppress the uniqueness check). Test against a live AR scene at CORE-001 so the fix is verified with real AR code, not an empty scene.
+**Prevention:** When CORE-001 starts, expect to touch `gradleTemplate`/AGP config. Don't re-add ARCore entries to the custom manifest — that's a *different* failure (see below).
+
+---
+
+### [2026-06-18] — Scaffold/Section 4 — AndroidManifest duplicate ARCore entries broke the merger
+
+**Symptom:** First custom `AndroidManifest.xml` (which declared `com.google.ar.core` meta-data + `android.hardware.camera.ar` feature with `tools:replace`) failed the manifest merge.
+**Cause:** With XR Plug-in Management ARCore = Required, the ARCore plug-in already injects those exact entries. Declaring them again in our manifest collides — `tools:replace` on the meta-data isn't enough because it's a module-level namespace issue, not a simple attribute conflict.
+**Fix:** Slimmed the custom manifest to ONLY camera + internet permissions; removed the ARCore feature and meta-data entirely. (Note: this did not fix the separate Unity-modules namespace clash above, which is upstream of our file.)
+**Prevention:** Custom AndroidManifest must never declare `com.google.ar.core` meta-data or `android.hardware.camera.ar` — the plug-in owns those. Keep the custom manifest to permissions the plug-in doesn't inject.
+
+---
+
+### [2026-06-18] — Scaffold/Section 5 — Core fails to compile: "namespace 'Core' does not exist" / "IService not found"
+
+**Symptom:** After adding the data schema/architecture files, `IDataLayer.cs` reported `CS0234 'Core' does not exist in namespace 'AnatomiQ'` and `CS0246 'IService' could not be found`, which cascaded into the test assembly being unable to see any `AnatomiQ.Core` types.
+**Cause:** `IDataLayer` was written as `: IService` with `using AnatomiQ.Core;`. `IService` lives in Core; Core already references Data → adding a Data→Core reference would be a circular assembly dependency, which Unity forbids, so Data didn't compile and everything downstream broke.
+**Fix:** Removed `: IService` and the Core using from `IDataLayer` (Data now depends on nothing). Added a dedicated `ServiceRegistry.RegisterDataLayer(IDataLayer)` so the data layer is registered without coupling Data back to Core. See the matching decision entry.
+**Prevention:** Anything in the Data assembly must not reference Core. If a Data type needs to be registry-held, register it via a typed method on ServiceRegistry, not the generic `Register(IService)` path.
+
+---
+
+### [2026-06-18] — Scaffold — Folder-merge zip extraction on Windows wiped sibling files
+
+**Symptom:** Repeatedly (Sections 1, 2, 5), extracting a delivered zip "merged" into `Assets/_AnatomiQ/` but silently REPLACED sibling folders, deleting their `.asmdef` and stub files (hit `Data`, then `AR/AI/UI`, then the whole `Anatomy` folder). Manifested as missing-assembly compile errors with no obvious cause.
+**Cause:** Windows Explorer "merge folder" on extract replaces same-named folders rather than unioning their contents when the source folder is dropped over the destination.
+**Fix:** Recovered by delivering one full authoritative `_AnatomiQ` folder (delete old, drop in new — safe at scaffold stage because nothing references scripts by GUID yet, so Unity regenerating `.meta` files is harmless). Then switched delivery to single-file drops / full-folder replacement only.
+**Prevention:** Never extract a sibling-structured zip over an existing Assets subtree. Use individual file drops, or a full delete-and-replace of the whole folder. (This becomes UNSAFE once prefabs/scenes reference scripts by GUID — at that point preserve `.meta` files.)
+
+---
+
+### [2026-06-18] — Scaffold — `pinnedPackages` manifest property throws on resolve
+
+**Symptom:** Adding the Unity 6.3 `pinnedPackages` property to `Packages/manifest.json` threw `Cannot read properties of null (reading 'severity')` during package resolution.
+**Cause:** The `pinnedPackages` manifest feature misbehaves in this Unity 6.3.17 build.
+**Fix:** Abandoned `pinnedPackages`; version-lock instead via the committed `Packages/packages-lock.json` (which records exact resolved versions).
+**Prevention:** Don't use `pinnedPackages` on 6.3.17. Commit `packages-lock.json` for reproducible versions.
+
+---
+
+### [2026-06-18] — Tooling — Git Bash mangles pasted multi-line commands
+
+**Symptom:** Pasting a block of git commands into Git Bash produced `bash: $'\E[200~git': command not found` and a cascade of `bash: deleted:: command not found` noise; commands appeared to "not run" (they were swallowed by bracketed-paste escape codes). Notably, a commit/push sometimes DID succeed amid the noise — look for the `[main <hash>]` and `<old>..<new> main -> main` lines to confirm.
+**Cause:** Bracketed-paste mode wraps pasted text in `^[[200~ ... ^[[201~` escape sequences that Git Bash mis-tokenizes for multi-line input.
+**Fix/Prevention:** Type git commands by hand, or paste ONE line at a time (right-click / Shift+Insert), never a multi-line block. Verify outcome with a hand-typed `git status` afterward.
 
 ---
 
@@ -352,7 +475,12 @@ Track each feature here. Only mark ✅ when tested on physical device (Poco X5 P
 
 ---
 
-*No performance notes yet.*
+**[2026-06-18 · scaffold] Benign recurring editor warnings (safe to ignore — NOT performance problems, logged so they aren't re-investigated):**
+- URP package shader notes: *`Shader warning in 'TraceVirtualOffset': conversion from larger type ... to smaller type 'min16float'`* — precision-conversion notes inside `com.unity.render-pipelines.core`'s own shader library. Cosmetic, every URP mobile project gets them.
+- Inference Engine shader note: *`Shader warning in 'Hidden/Sentis/SliceSet': signed/unsigned mismatch`* — package-internal (`com.unity.ai.inference`), cosmetic.
+- Test Framework writes `Assets/Resources/PerformanceTestRunInfo.json` + `PerformanceTestRunSettings.json` on build — junk, git-ignored (see `.gitignore`).
+
+*(Real device performance notes will start at CORE-002 / on-device testing.)*
 
 ---
 
@@ -376,7 +504,13 @@ Track each feature here. Only mark ✅ when tested on physical device (Poco X5 P
 >
 > *— "AR raycasts against organ meshes return inconsistent results when meshes overlap. Pattern: use raycast layer masks per anatomy layer to disambiguate."*
 
-*No patterns logged yet.*
+**— Windows zip-extraction folder merges silently delete sibling files.** Three separate breakages in the scaffold came from extracting a folder-structured zip over `Assets/_AnatomiQ/`. Pattern: prefer single-file drops or full delete-and-replace; never let Explorer "merge" a folder over an existing Assets subtree. Once GUIDs are referenced (prefabs/scenes), always preserve `.meta` files.
+
+**— Assembly cycles surface as "namespace/type not found," not as an explicit cycle error.** When a low-layer assembly suddenly can't see a type it should, check for an accidental back-reference creating a Core↔Data style cycle before suspecting the type itself. Keep the DAG strictly one-directional; register cross-layer types via typed methods rather than shared marker interfaces that force a back-ref.
+
+**— "Build failed" ≠ "code broken."** Distinguish compile errors (block editor + Play Mode, must fix now) from release-packaging failures (Gradle/manifest, only block the APK). The latter can be deferred without blocking editor-verifiable work — but only after the cause is *verified* from the generated artifacts, not inferred.
+
+**— Verify package/setting state from the generated artifact, not from assumption.** The ARCore namespace cause was only pinned down by reading the generated manifests under `Library/Bee/...`. When a build/setting issue is ambiguous, inspect what Unity actually generated before deciding a fix.
 
 ---
 
@@ -421,6 +555,8 @@ Track each feature here. Only mark ✅ when tested on physical device (Poco X5 P
 | Symptom pattern schema | Phase 3 dependency, premature now | Start of Phase 3 (PRISM-001) |
 | Localization beyond English | Externalize strings from day 1, but ship English only | Post-academic |
 | Final logo, app icon, full visual identity | Iterate against real screens | Mid-Phase 3 or commission later |
+| ARCore release-APK Gradle namespace fix (`:arcore_client:` vs `:unityandroidpermissions:`) | Needs a real AR scene to verify the gradleTemplate fix against | CORE-001 (first AR feature) |
+| `physiological_state` node `system` value vs `BodySystem` enum (no `Metabolic` member) | Schema/importer concern; no importer or medical content loaded yet | CORE-008 (Data Layer) |
 
 ---
 
@@ -445,7 +581,10 @@ Track each feature here. Only mark ✅ when tested on physical device (Poco X5 P
 | Cross-cutting service access pattern | ✅ RESOLVED | ServiceRegistry ScriptableObject with interfaces |
 | ATLAS-006 ONNX model sourcing | 🟢 INTENTIONALLY DEFERRED | Research at start of ATLAS-006 chat (state changes) |
 | Schema v2 migration path | ✅ RESOLVED | Migration script policy specified |
+| Package versions at scaffold time | ✅ RESOLVED | AR 6.3.4 pair, Inference 2.5.0, Newtonsoft 3.2.2, Localization 1.5.12, Input 1.19.0; locked via packages-lock.json |
+| ARCore release-APK manifest-merge failure | 🟡 DEFERRED → CORE-001 | Custom Main Gradle Template; verified cause = Unity's own module namespace clash under Gradle 9.1.0 |
+| physiological_state `system` vs BodySystem enum | 🟡 DEFERRED → CORE-008 | Reconcile when JSON importer + medical content land |
 
 ---
 
-*Last updated: planning complete + gap-fill + build-environment rounds complete · Step 2 (Git & source control) DONE — repo live on GitHub · ready for Step 4 (Unity scaffold chat)*
+*Last updated: Unity scaffold chat (Steps 1–8) DONE — project compiles, all gates passed (EditMode 5 tests + PlayMode 1 test green; Section 3 clean APK), committed + pushed. Two items deferred forward: ARCore release-APK Gradle fix → CORE-001; physiological_state/BodySystem enum → CORE-008. Ready for first feature chat (suggested: CORE-001, or CORE-008 for AR-independent progress).*
