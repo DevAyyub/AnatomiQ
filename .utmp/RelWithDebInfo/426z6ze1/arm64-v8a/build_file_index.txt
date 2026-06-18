@@ -1,0 +1,2 @@
+C:\Users\user\Desktop\AnatomiQ\anatomiq\anatomiq-git-scaffold\Library\Bee\Android\Prj\IL2CPP\Gradle\unityLibrary\src\main\cpp\CMakeLists.txt
+C:\Users\user\Desktop\AnatomiQ\anatomiq\anatomiq-git-scaffold\Library\Bee\Android\Prj\IL2CPP\Gradle\unityLibrary\src\main\cpp\GameActivity\CMakeLists.txt
