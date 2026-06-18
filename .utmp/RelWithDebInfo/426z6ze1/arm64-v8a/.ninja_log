@@ -1,10 +1,19 @@
 # ninja log v5
 26	1055	8034809376620204	GameActivity/CMakeFiles/game.dir/UGAInputKeyEvent.cpp.o	43c97e1524f76c34
 15	1064	8034809376635347	GameActivity/CMakeFiles/game.dir/UGAEntry.cpp.o	76bbd663eb08b7db
-5	1085	8034809376855052	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	42766f5af64e6d9e
-32	1098	8034809376986472	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	2b6707e99f43de2a
-0	1132	8034809377358773	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	fc8785a52ba181c5
-22	1287	8034809378903565	GameActivity/CMakeFiles/game.dir/UGAInput.cpp.o	b1e1947f2cf29406
 41	1323	8034809379271583	GameActivity/CMakeFiles/game.dir/UGASoftKeyboard.cpp.o	16e912234547c0d
+5	1085	8034809376855052	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	42766f5af64e6d9e
+0	1132	8034809377358773	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	fc8785a52ba181c5
+32	1098	8034809376986472	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	2b6707e99f43de2a
+22	1287	8034809378903565	GameActivity/CMakeFiles/game.dir/UGAInput.cpp.o	b1e1947f2cf29406
 11	1364	8034809379694841	GameActivity/CMakeFiles/game.dir/UGAApplication.cpp.o	5cf628f023f401dd
 1365	1501	8034809381128249	C:/Users/user/Desktop/AnatomiQ/anatomiq/anatomiq-git-scaffold/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/426z6ze1/obj/arm64-v8a/libgame.so	bbad344453e17dae
+23	1077	8034836087795054	GameActivity/CMakeFiles/game.dir/UGAEntry.cpp.o	76bbd663eb08b7db
+31	1120	8034836088313419	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	42766f5af64e6d9e
+47	1134	8034836088465997	GameActivity/CMakeFiles/game.dir/UGAInputKeyEvent.cpp.o	43c97e1524f76c34
+13	1169	8034836088812251	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	fc8785a52ba181c5
+56	1250	8034836089588472	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	2b6707e99f43de2a
+39	1265	8034836089723422	GameActivity/CMakeFiles/game.dir/UGASoftKeyboard.cpp.o	16e912234547c0d
+66	1468	8034836091821380	GameActivity/CMakeFiles/game.dir/UGAInput.cpp.o	b1e1947f2cf29406
+5	1560	8034836092649744	GameActivity/CMakeFiles/game.dir/UGAApplication.cpp.o	5cf628f023f401dd
+1560	1704	8034836094174166	C:/Users/user/Desktop/AnatomiQ/anatomiq/anatomiq-git-scaffold/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/426z6ze1/obj/arm64-v8a/libgame.so	bbad344453e17dae

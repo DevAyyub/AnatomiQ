@@ -70,3 +70,9 @@ PerformanceLogs/
 
 # Inference Engine model staging
 InferenceModels/_staging/
+
+# Unity Test Framework performance runner artifacts (auto-generated, transient)
+/Assets/Resources/PerformanceTestRunInfo.json
+/Assets/Resources/PerformanceTestRunInfo.json.meta
+/Assets/Resources/PerformanceTestRunSettings.json
+/Assets/Resources/PerformanceTestRunSettings.json.meta

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  AnatomiQ - Android manifest (CORE-001 / Section 11)
+
+  SCOPE: This file declares ONLY entries that the ARCore plug-in does not
+  already inject. When XR Plug-in Management has Google ARCore = Required,
+  the plug-in (:arcore_client:) auto-injects at build time:
+      - <uses-feature android:name="android.hardware.camera.ar" required />
+      - <meta-data android:name="com.google.ar.core" value="required" />
+  Declaring those here too causes a Gradle manifest-merger namespace clash
+  ("com.google.ar.core is used in multiple modules"), so they are intentionally
+  NOT repeated here. Source of truth for AR-required = XR Plug-in Management.
+
+  Device-unsupported / permission-denied cases are handled in software by
+  CORE-007 (3D Viewer Mode), not by weakening these declarations.
+-->
+<manifest
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Camera runtime permission (ARCore uses the camera). Safe to declare;
+         merges with the plug-in's camera entries without conflict. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- Network access for the AI Orchestrator (CORE-006) async API calls and
+         for CORE-007 connectivity detection (offline fallback). -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- Empty application node kept as the documented hook for any future
+         app-level entries we need that Unity/ARCore do not auto-inject. -->
+    <application tools:node="merge" />
+</manifest>
