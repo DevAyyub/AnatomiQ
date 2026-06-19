@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Newtonsoft.Json;
 using UnityEngine;
 
 namespace AnatomiQ.Data
@@ -55,8 +56,8 @@ namespace AnatomiQ.Data
         /// <summary>Anatomical layer driving the layer toggle (CORE-003).</summary>
         public AnatomyLayer Layer;
 
-        /// <summary>Coarse body region for spatial queries.</summary>
-        public AnatomicalRegion Region;
+        /// <summary>Coarse body region for spatial queries. JSON key is <c>anatomicalRegion</c>.</summary>
+        [JsonProperty("anatomicalRegion")] public AnatomicalRegion Region;
 
         /// <summary>Outgoing edges to other nodes — the graph structure CORE-005 walks.</summary>
         public List<OrganConnection> Connections;
@@ -93,10 +94,18 @@ namespace AnatomiQ.Data
         public string LastReviewed;
     }
 
-    /// <summary>The twelve body systems an organ node can belong to (Data Schemas §2.3).</summary>
+    /// <summary>
+    /// The twelve body systems an organ node can belong to (Data Schemas §2.3).
+    /// NOTE: member renamed Vascular -> Cardiovascular at CORE-008 to match the authored
+    /// Phase 1 medical content (7 nodes use system "cardiovascular") and the standard organ-system
+    /// taxonomy (the heart is not a "vessel"). This is the SYSTEM axis; the layer axis still has
+    /// <see cref="AnatomyLayer.Vascular"/>, which is correct and intentionally distinct (e.g.
+    /// blood_vessels_systemic is system=Cardiovascular, layer=Vascular). Data Schemas §2.3 should
+    /// be updated from "vascular" to "cardiovascular" to stay in sync.
+    /// </summary>
     public enum BodySystem
     {
-        Skeletal, Muscular, Vascular, Nervous, Lymphatic, Endocrine,
+        Skeletal, Muscular, Cardiovascular, Nervous, Lymphatic, Endocrine,
         Digestive, Respiratory, Urinary, Reproductive, Integumentary, Sensory
     }
 

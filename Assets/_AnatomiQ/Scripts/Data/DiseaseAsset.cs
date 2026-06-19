@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Newtonsoft.Json;
 using UnityEngine;
 
 namespace AnatomiQ.Data
@@ -29,8 +30,8 @@ namespace AnatomiQ.Data
         /// <summary>Clinical category of the disease.</summary>
         public DiseaseCategory Category;
 
-        /// <summary>ICD-10 code (e.g. "E11").</summary>
-        public string Icd10Code;
+        /// <summary>ICD-10 code (e.g. "E11"). JSON key is <c>icd10</c>.</summary>
+        [JsonProperty("icd10")] public string Icd10Code;
 
         /// <summary>Several-sentence clinical description.</summary>
         [TextArea(3, 6)] public string Description;
@@ -90,8 +91,8 @@ namespace AnatomiQ.Data
         /// <summary>How long the activation animation plays, in milliseconds.</summary>
         public int DurationMs;
 
-        /// <summary>The visual effect to play on the 3D model for this step.</summary>
-        public VisualEffect Effect;
+        /// <summary>The visual effect to play on the 3D model for this step. JSON key is <c>visualEffect</c>.</summary>
+        [JsonProperty("visualEffect")] public VisualEffect Effect;
 
         /// <summary>Pre-baked, medically-reviewed narration used when AI is offline. Must stand alone.</summary>
         [TextArea(2, 5)] public string NarrationFallback;

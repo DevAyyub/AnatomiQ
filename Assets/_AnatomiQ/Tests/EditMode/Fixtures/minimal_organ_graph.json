@@ -1,0 +1,55 @@
+{
+  "organs": [
+    {
+      "schemaVersion": 1,
+      "organId": "test_node_a",
+      "displayName": "Test Node A",
+      "nodeType": "anatomical",
+      "fmaId": "FMA_TEST_A",
+      "parentOrganId": null,
+      "system": "endocrine",
+      "meshId": "Test_NodeA_LOD0",
+      "description": "Test fixture node A. Connects to B with severity 50.",
+      "layer": "organs",
+      "anatomicalRegion": "systemic",
+      "connections": [
+        { "toOrganId": "test_node_b", "type": "regulates", "mechanism": "test_mechanism_ab",
+          "description": "Test connection A to B" }
+      ],
+      "metadata": { "sources": ["test fixture"], "lastReviewed": null }
+    },
+    {
+      "schemaVersion": 1,
+      "organId": "test_node_b",
+      "displayName": "Test Node B",
+      "nodeType": "anatomical",
+      "fmaId": "FMA_TEST_B",
+      "parentOrganId": null,
+      "system": "endocrine",
+      "meshId": "Test_NodeB_LOD0",
+      "description": "Test fixture node B. Connects to C.",
+      "layer": "organs",
+      "anatomicalRegion": "systemic",
+      "connections": [
+        { "toOrganId": "test_node_c", "type": "signals", "mechanism": "test_mechanism_bc",
+          "description": "Test connection B to C" }
+      ],
+      "metadata": { "sources": ["test fixture"], "lastReviewed": null }
+    },
+    {
+      "schemaVersion": 1,
+      "organId": "test_node_c",
+      "displayName": "Test Node C",
+      "nodeType": "anatomical",
+      "fmaId": "FMA_TEST_C",
+      "parentOrganId": null,
+      "system": "endocrine",
+      "meshId": "Test_NodeC_LOD0",
+      "description": "Test fixture node C. Terminal node.",
+      "layer": "organs",
+      "anatomicalRegion": "systemic",
+      "connections": [],
+      "metadata": { "sources": ["test fixture"], "lastReviewed": null }
+    }
+  ]
+}

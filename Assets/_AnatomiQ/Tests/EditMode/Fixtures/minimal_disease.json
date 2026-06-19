@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "diseaseId": "test_disease",
+  "displayName": "Test Disease",
+  "shortLabel": "Test",
+  "category": "metabolic",
+  "icd10": "TEST",
+  "description": "Test fixture disease. Three-step linear cascade across test nodes A, B, C.",
+  "entryOrganId": "test_node_a",
+  "stages": [
+    {
+      "stageId": "only",
+      "label": "Only Stage",
+      "description": "Single test stage.",
+      "stepIndices": [0, 1, 2]
+    }
+  ],
+  "cascade": [
+    {
+      "stepIndex": 0,
+      "stage": "only",
+      "targetOrganId": "test_node_a",
+      "mechanismKey": "test_mechanism_a",
+      "severity": 30,
+      "delayMs": 0,
+      "durationMs": 3000,
+      "visualEffect": {
+        "type": "highlight_pulse",
+        "color": "#FF0000",
+        "intensity": 0.5
+      },
+      "narrationFallback": "Test step zero. Node A activated.",
+      "aiContext": {
+        "physiology": "test physiology zero",
+        "clinicalNote": "test clinical note zero",
+        "audience": "general"
+      }
+    },
+    {
+      "stepIndex": 1,
+      "stage": "only",
+      "targetOrganId": "test_node_b",
+      "mechanismKey": "test_mechanism_b",
+      "severity": 50,
+      "delayMs": 3000,
+      "durationMs": 3000,
+      "visualEffect": {
+        "type": "highlight_pulse",
+        "color": "#FFFF00",
+        "intensity": 0.5
+      },
+      "narrationFallback": "Test step one. Node B activated.",
+      "aiContext": {
+        "physiology": "test physiology one",
+        "clinicalNote": "test clinical note one",
+        "audience": "general"
+      }
+    },
+    {
+      "stepIndex": 2,
+      "stage": "only",
+      "targetOrganId": "test_node_c",
+      "mechanismKey": "test_mechanism_c",
+      "severity": 80,
+      "delayMs": 6000,
+      "durationMs": 3000,
+      "visualEffect": {
+        "type": "highlight_pulse",
+        "color": "#00FF00",
+        "intensity": 0.5
+      },
+      "narrationFallback": "Test step two. Node C activated.",
+      "aiContext": {
+        "physiology": "test physiology two",
+        "clinicalNote": "test clinical note two",
+        "audience": "general"
+      }
+    }
+  ],
+  "metadata": {
+    "sources": ["test fixture"],
+    "medicalReviewedBy": "test fixture",
+    "medicalReviewedDate": "2026-01-01",
+    "version": "1.0-test",
+    "totalDurationMs": 9000,
+    "stepCount": 3
+  }
+}
