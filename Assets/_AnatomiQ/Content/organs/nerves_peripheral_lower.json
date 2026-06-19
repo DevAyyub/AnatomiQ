@@ -1,0 +1,16 @@
+{
+  "organId": "nerves_peripheral_lower",
+  "displayName": "Peripheral Nerves (Lower Extremity)",
+  "nodeType": "anatomical",
+  "fmaId": "FMA65229",
+  "parentOrganId": null,
+  "system": "nervous",
+  "meshId": "Body_Nerves_PeripheralLower_LOD0",
+  "description": "Nerve fibers innervating the legs and feet. Vulnerable to vascular and metabolic damage; symptoms appear distally first.",
+  "layer": "nervous",
+  "anatomicalRegion": "leg_left",
+  "connections": [
+    { "toOrganId": "blood_vessels_systemic", "type": "drains_blood", "mechanism": "vasa_nervorum",
+      "description": "Receives oxygen via small vessels supplying the nerves themselves" }
+  ]
+}

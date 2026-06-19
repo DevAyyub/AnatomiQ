@@ -1,0 +1,16 @@
+{
+  "organId": "blood_vessels_systemic",
+  "displayName": "Systemic Microvasculature",
+  "nodeType": "anatomical",
+  "fmaId": "FMA50721",
+  "parentOrganId": null,
+  "system": "cardiovascular",
+  "meshId": "Body_Vessels_Systemic_LOD0",
+  "description": "Network of arterioles, capillaries, and venules throughout the body. Site of oxygen and nutrient exchange with tissues.",
+  "layer": "vascular",
+  "anatomicalRegion": "systemic",
+  "connections": [
+    { "toOrganId": "tissues_peripheral", "type": "supplies_blood", "mechanism": "capillary_perfusion",
+      "description": "Delivers oxygen and nutrients to peripheral tissues" }
+  ]
+}

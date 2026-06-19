@@ -1,0 +1,13 @@
+{
+  "organId": "brain",
+  "displayName": "Brain",
+  "nodeType": "anatomical",
+  "fmaId": "FMA50801",
+  "parentOrganId": null,
+  "system": "nervous",
+  "meshId": "Body_Brain_LOD0",
+  "description": "Central organ of the nervous system, occupying the cranial cavity.",
+  "layer": "nervous",
+  "anatomicalRegion": "head",
+  "connections": []
+}

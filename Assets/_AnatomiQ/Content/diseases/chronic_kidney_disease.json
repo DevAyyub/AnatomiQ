@@ -1,0 +1,273 @@
+{
+  "schemaVersion": 1,
+  "diseaseId": "chronic_kidney_disease",
+  "displayName": "Chronic Kidney Disease",
+  "shortLabel": "Chronic Kidney Disease",
+  "category": "renal",
+  "icd10": "N18",
+  "description": "Progressive loss of kidney function over months to years, regardless of cause. As filtration declines, multiple downstream complications develop: anemia from reduced erythropoietin, mineral and bone disease from disrupted calcium-phosphate balance, cardiovascular disease, and ultimately end-stage renal failure requiring dialysis or transplant.",
+  "entryOrganId": "kidney_glomerulus",
+
+  "stages": [
+    {
+      "stageId": "early",
+      "label": "Early — Stages 1–2 (eGFR ≥60)",
+      "description": "Detectable kidney damage with preserved or mildly reduced filtration. Often asymptomatic. Markers like proteinuria appear.",
+      "stepIndices": [0, 1, 2]
+    },
+    {
+      "stageId": "intermediate",
+      "label": "Intermediate — Stage 3 (eGFR 30–59)",
+      "description": "Moderate reduction in filtration. Erythropoietin and vitamin D metabolism become impaired. Anemia and early bone disease begin.",
+      "stepIndices": [3, 4, 5, 6]
+    },
+    {
+      "stageId": "advanced",
+      "label": "Advanced — Stages 4–5 (eGFR <30)",
+      "description": "Severe loss of kidney function approaching end-stage renal disease. Multiple systemic complications including significant cardiovascular disease.",
+      "stepIndices": [7, 8, 9, 10]
+    }
+  ],
+
+  "cascade": [
+    {
+      "stepIndex": 0,
+      "stage": "early",
+      "targetOrganId": "kidney_glomerulus",
+      "mechanismKey": "glomerular_damage_initial",
+      "severity": 30,
+      "delayMs": 0,
+      "durationMs": 3000,
+      "visualEffect": {
+        "type": "highlight_pulse",
+        "color": "#FFB800",
+        "intensity": 0.5
+      },
+      "narrationFallback": "Glomerular filtration units begin sustaining damage from underlying causes such as diabetes, hypertension, or autoimmune disease.",
+      "aiContext": {
+        "physiology": "early glomerular injury",
+        "clinicalNote": "Most CKD is caused by diabetes or hypertension, but many other causes exist.",
+        "audience": "general"
+      }
+    },
+    {
+      "stepIndex": 1,
+      "stage": "early",
+      "targetOrganId": "kidney_left",
+      "mechanismKey": "proteinuria_onset",
+      "severity": 35,
+      "delayMs": 2500,
+      "durationMs": 3000,
+      "visualEffect": {
+        "type": "color_change",
+        "fromColor": "#A85C45",
+        "toColor": "#8B4830",
+        "fadeMs": 2500
+      },
+      "narrationFallback": "Damaged kidney filters allow protein to leak into the urine, an early warning sign detectable on a urine test.",
+      "aiContext": {
+        "physiology": "albuminuria as early CKD marker",
+        "clinicalNote": "Microalbuminuria is the earliest detectable sign and a key predictor of progression.",
+        "audience": "general"
+      }
+    },
+    {
+      "stepIndex": 2,
+      "stage": "early",
+      "targetOrganId": "blood_pressure_systemic",
+      "mechanismKey": "renal_hypertension",
+      "severity": 45,
+      "delayMs": 5000,
+      "durationMs": 3000,
+      "visualEffect": {
+        "type": "highlight_pulse",
+        "color": "#FF4040",
+        "intensity": 0.6
+      },
+      "narrationFallback": "Damaged kidneys disrupt fluid and hormone balance, raising systemic blood pressure and creating a self-reinforcing cycle of further kidney damage.",
+      "aiContext": {
+        "physiology": "renin-angiotensin-aldosterone activation in CKD",
+        "clinicalNote": "CKD and hypertension worsen each other; controlling blood pressure is essential to slow CKD progression.",
+        "audience": "general"
+      }
+    },
+    {
+      "stepIndex": 3,
+      "stage": "intermediate",
+      "targetOrganId": "kidney_left",
+      "mechanismKey": "epo_synthesis_decline",
+      "severity": 55,
+      "delayMs": 8000,
+      "durationMs": 3000,
+      "visualEffect": {
+        "type": "shrink",
+        "scale": 0.93,
+        "durationMs": 2500
+      },
+      "narrationFallback": "As functional kidney tissue is lost, the kidneys produce less erythropoietin — the hormone that tells bone marrow to make red blood cells.",
+      "aiContext": {
+        "physiology": "decreased erythropoietin synthesis from tubulointerstitial fibrosis",
+        "clinicalNote": "Erythropoietin deficiency is the primary mechanism of CKD-associated anemia.",
+        "audience": "general"
+      }
+    },
+    {
+      "stepIndex": 4,
+      "stage": "intermediate",
+      "targetOrganId": "bone_marrow",
+      "mechanismKey": "reduced_erythropoiesis",
+      "severity": 55,
+      "delayMs": 11500,
+      "durationMs": 3000,
+      "visualEffect": {
+        "type": "color_change",
+        "fromColor": "#D44545",
+        "toColor": "#9B3535",
+        "fadeMs": 3000
+      },
+      "narrationFallback": "With less erythropoietin reaching it, bone marrow produces fewer red blood cells, leading to anemia and chronic fatigue.",
+      "aiContext": {
+        "physiology": "anemia of chronic kidney disease",
+        "clinicalNote": "Affects 8% at stage 1 and over 50% at stage 5. Treatable with EPO-stimulating agents and iron.",
+        "audience": "general"
+      }
+    },
+    {
+      "stepIndex": 5,
+      "stage": "intermediate",
+      "targetOrganId": "serum_phosphate",
+      "mechanismKey": "phosphate_retention",
+      "severity": 50,
+      "delayMs": 14500,
+      "durationMs": 3000,
+      "visualEffect": {
+        "type": "highlight_pulse",
+        "color": "#FF8040",
+        "intensity": 0.6
+      },
+      "narrationFallback": "Failing kidneys can no longer fully excrete phosphate, allowing levels to rise in the blood and disrupting calcium balance.",
+      "aiContext": {
+        "physiology": "hyperphosphatemia from reduced renal excretion",
+        "clinicalNote": "Phosphate retention drives much of CKD bone disease and cardiovascular calcification.",
+        "audience": "general"
+      }
+    },
+    {
+      "stepIndex": 6,
+      "stage": "intermediate",
+      "targetOrganId": "parathyroid_glands",
+      "mechanismKey": "secondary_hyperparathyroidism",
+      "severity": 60,
+      "delayMs": 17500,
+      "durationMs": 3000,
+      "visualEffect": {
+        "type": "highlight_pulse",
+        "color": "#FFB800",
+        "intensity": 0.7
+      },
+      "narrationFallback": "In response to high phosphate and low active vitamin D, the parathyroid glands grow and secrete excess parathyroid hormone, attempting to correct the imbalance.",
+      "aiContext": {
+        "physiology": "secondary hyperparathyroidism in CKD-MBD",
+        "clinicalNote": "Initially adaptive, but chronic overactivation drives bone disease and vascular calcification.",
+        "audience": "general"
+      }
+    },
+    {
+      "stepIndex": 7,
+      "stage": "advanced",
+      "targetOrganId": "bone_skeletal_general",
+      "mechanismKey": "renal_osteodystrophy",
+      "severity": 75,
+      "delayMs": 20500,
+      "durationMs": 3500,
+      "visualEffect": {
+        "type": "color_change",
+        "fromColor": "#E8DCC0",
+        "toColor": "#B8A080",
+        "fadeMs": 3000
+      },
+      "narrationFallback": "Sustained parathyroid hormone elevation pulls calcium from the bones, weakening the skeleton and causing bone pain, deformity, and fracture risk.",
+      "aiContext": {
+        "physiology": "chronic kidney disease mineral and bone disorder (CKD-MBD)",
+        "clinicalNote": "Spectrum includes high-turnover, low-turnover, and mixed bone disease.",
+        "audience": "general"
+      }
+    },
+    {
+      "stepIndex": 8,
+      "stage": "advanced",
+      "targetOrganId": "blood_vessels_systemic",
+      "mechanismKey": "vascular_calcification",
+      "severity": 75,
+      "delayMs": 24000,
+      "durationMs": 3500,
+      "visualEffect": {
+        "type": "thicken",
+        "thicknessFactor": 1.45,
+        "durationMs": 3500
+      },
+      "narrationFallback": "Calcium displaced from bone, combined with high phosphate, deposits in arterial walls, accelerating vascular stiffening and cardiovascular risk.",
+      "aiContext": {
+        "physiology": "vascular calcification in CKD-MBD",
+        "clinicalNote": "A key reason cardiovascular disease causes most deaths in CKD patients.",
+        "audience": "general"
+      }
+    },
+    {
+      "stepIndex": 9,
+      "stage": "advanced",
+      "targetOrganId": "heart_left_ventricle",
+      "mechanismKey": "cardiorenal_syndrome",
+      "severity": 85,
+      "delayMs": 27500,
+      "durationMs": 3500,
+      "visualEffect": {
+        "type": "thicken",
+        "thicknessFactor": 1.5,
+        "durationMs": 3500
+      },
+      "narrationFallback": "The combination of anemia, fluid overload, hypertension, and vascular calcification overburdens the heart, producing left ventricular hypertrophy and progressive heart failure.",
+      "aiContext": {
+        "physiology": "cardiorenal anemia syndrome",
+        "clinicalNote": "Cardiovascular disease accounts for the majority of mortality in CKD.",
+        "audience": "general"
+      }
+    },
+    {
+      "stepIndex": 10,
+      "stage": "advanced",
+      "targetOrganId": "kidney_left",
+      "mechanismKey": "end_stage_renal_disease",
+      "severity": 95,
+      "delayMs": 31000,
+      "durationMs": 4000,
+      "visualEffect": {
+        "type": "shrink",
+        "scale": 0.7,
+        "durationMs": 3500
+      },
+      "narrationFallback": "Kidney function falls below the threshold required to sustain life. Dialysis or kidney transplantation becomes necessary.",
+      "aiContext": {
+        "physiology": "end-stage renal disease, eGFR <15",
+        "clinicalNote": "Without renal replacement therapy, ESRD is fatal within weeks to months.",
+        "audience": "general"
+      }
+    }
+  ],
+
+  "metadata": {
+    "sources": [
+      "StatPearls — Chronic Kidney Disease (NCBI, 2024)",
+      "StatPearls — End-Stage Renal Disease (NCBI, 2025)",
+      "Chronic Kidney Disease and Its Complications (PMC2474786)",
+      "Bone and bone derived factors in kidney disease (PMC10941011)",
+      "AMBOSS Chronic Kidney Disease",
+      "KDIGO Clinical Practice Guidelines for CKD (2024)"
+    ],
+    "medicalReviewedBy": null,
+    "medicalReviewedDate": null,
+    "version": "0.9-pre-review",
+    "totalDurationMs": 35000,
+    "stepCount": 11
+  }
+}

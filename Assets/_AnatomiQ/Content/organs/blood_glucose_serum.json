@@ -1,0 +1,16 @@
+{
+  "organId": "blood_glucose_serum",
+  "displayName": "Blood Glucose Level",
+  "nodeType": "physiological_state",
+  "fmaId": null,
+  "parentOrganId": null,
+  "system": "endocrine",
+  "meshId": null,
+  "description": "Circulating glucose concentration in the bloodstream. Sustained elevation defines diabetes and drives microvascular complications.",
+  "layer": "vascular",
+  "anatomicalRegion": "systemic",
+  "connections": [
+    { "toOrganId": "kidney_glomerulus", "type": "filters", "mechanism": "renal_filtration",
+      "description": "Filtered by the kidneys; high levels exceed reabsorptive capacity" }
+  ]
+}

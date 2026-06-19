@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a23c73c4d1dbd540b46ca7a38067d8c, type: 3}
+  m_Name: blood_red_cells
+  m_EditorClassIdentifier: AnatomiQ.Data::AnatomiQ.Data.OrganAsset
+  SchemaVersion: 1
+  OrganId: blood_red_cells
+  DisplayName: Red Blood Cells
+  NodeType: 0
+  FmaId: FMA62845
+  ParentOrganId: 
+  System: 2
+  MeshId: Body_Blood_RedCells_LOD0
+  Description: Oxygen-carrying cells produced in bone marrow under stimulation by
+    erythropoietin. Reduced production causes anemia.
+  Layer: 2
+  Region: 11
+  Connections:
+  - ToOrganId: tissues_peripheral
+    Type: 2
+    Mechanism: oxygen_delivery
+    Description: Carry oxygen from lungs to tissues throughout the body
+  Metadata:
+    Sources: []
+    LastReviewed: 

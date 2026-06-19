@@ -1,0 +1,364 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 85d6d3d56ef0e2449a6eb0497f72471f, type: 3}
+  m_Name: essential_hypertension
+  m_EditorClassIdentifier: AnatomiQ.Data::AnatomiQ.Data.DiseaseAsset
+  SchemaVersion: 1
+  DiseaseId: essential_hypertension
+  DisplayName: Essential Hypertension
+  ShortLabel: Hypertension
+  Category: 1
+  Icd10Code: I10
+  Description: Chronically elevated systemic arterial pressure of unknown specific
+    cause. Sustained elevation damages target organs through microvascular dysfunction,
+    endothelial injury, and pressure-induced structural remodeling, primarily affecting
+    heart, kidneys, brain, retina, and large vessels.
+  EntryOrganId: blood_pressure_systemic
+  Stages:
+  - StageId: early
+    Label: "Early (0\u20135 years)"
+    Description: Sustained elevated blood pressure begins inducing endothelial dysfunction
+      and microvascular changes. Often asymptomatic.
+    StepIndices: 00000000010000000200000003000000
+  - StageId: intermediate
+    Label: "Intermediate (5\u201315 years)"
+    Description: Cardiac structural changes develop. Microvascular damage spreads
+      to retina, kidneys, and brain. Early end-organ damage detectable.
+    StepIndices: 04000000050000000600000007000000
+  - StageId: advanced
+    Label: Advanced (15+ years)
+    Description: Established target organ damage. Increased risk of stroke, heart
+      failure, chronic kidney disease, and vision loss.
+    StepIndices: 08000000090000000a000000
+  Cascade:
+  - StepIndex: 0
+    Stage: early
+    TargetOrganId: blood_pressure_systemic
+    MechanismKey: sustained_pressure_elevation
+    Severity: 30
+    DelayMs: 0
+    DurationMs: 3000
+    Effect:
+      Type: 0
+      Color: '#FF4040'
+      FromColor: 
+      ToColor: 
+      Intensity: 0.5
+      FadeMs: 0
+      ParticleType: 
+      Rate: 0
+      Scale: 0
+      ThicknessFactor: 0
+      FromOrganId: 
+      ToOrganId: 
+      DurationMs: 0
+    NarrationFallback: Systemic blood pressure rises and remains elevated, exerting
+      greater force against arterial walls throughout the body.
+    AiContext:
+      Physiology: sustained systemic hypertension
+      ClinicalNote: "Often asymptomatic; detected on routine checks. Defined as \u2265130/80
+        mmHg per current guidelines."
+      Audience: 0
+  - StepIndex: 1
+    Stage: early
+    TargetOrganId: blood_vessels_systemic
+    MechanismKey: endothelial_dysfunction
+    Severity: 35
+    DelayMs: 2500
+    DurationMs: 3000
+    Effect:
+      Type: 1
+      Color: 
+      FromColor: '#C44545'
+      ToColor: '#A53333'
+      Intensity: 0
+      FadeMs: 2500
+      ParticleType: 
+      Rate: 0
+      Scale: 0
+      ThicknessFactor: 0
+      FromOrganId: 
+      ToOrganId: 
+      DurationMs: 0
+    NarrationFallback: "The inner lining of blood vessels \u2014 the endothelium
+      \u2014 begins to malfunction under sustained pressure, reducing nitric oxide
+      and impairing vessel relaxation."
+    AiContext:
+      Physiology: endothelial dysfunction with reduced NO bioavailability
+      ClinicalNote: The earliest reversible stage; aggressive blood pressure control
+        here can prevent later complications.
+      Audience: 0
+  - StepIndex: 2
+    Stage: early
+    TargetOrganId: arteries_large
+    MechanismKey: arterial_stiffening
+    Severity: 40
+    DelayMs: 5000
+    DurationMs: 3000
+    Effect:
+      Type: 5
+      Color: 
+      FromColor: 
+      ToColor: 
+      Intensity: 0
+      FadeMs: 0
+      ParticleType: 
+      Rate: 0
+      Scale: 0
+      ThicknessFactor: 1.2
+      FromOrganId: 
+      ToOrganId: 
+      DurationMs: 2500
+    NarrationFallback: Large arteries begin to stiffen as elastin fibers are gradually
+      replaced by collagen, reducing their ability to buffer the heart's pulsing
+      flow.
+    AiContext:
+      Physiology: arterial stiffening and reduced compliance
+      ClinicalNote: Detectable as widening pulse pressure on standard blood pressure
+        measurement.
+      Audience: 0
+  - StepIndex: 3
+    Stage: early
+    TargetOrganId: heart_left_ventricle
+    MechanismKey: compensatory_lvh_early
+    Severity: 35
+    DelayMs: 8000
+    DurationMs: 3000
+    Effect:
+      Type: 5
+      Color: 
+      FromColor: 
+      ToColor: 
+      Intensity: 0
+      FadeMs: 0
+      ParticleType: 
+      Rate: 0
+      Scale: 0
+      ThicknessFactor: 1.15
+      FromOrganId: 
+      ToOrganId: 
+      DurationMs: 3000
+    NarrationFallback: The left ventricle begins to thicken as it works harder to
+      pump blood against increased arterial pressure.
+    AiContext:
+      Physiology: early left ventricular hypertrophy
+      ClinicalNote: Visible on echocardiogram before symptoms develop.
+      Audience: 0
+  - StepIndex: 4
+    Stage: intermediate
+    TargetOrganId: blood_vessels_systemic
+    MechanismKey: microvascular_remodeling
+    Severity: 55
+    DelayMs: 11500
+    DurationMs: 3000
+    Effect:
+      Type: 5
+      Color: 
+      FromColor: 
+      ToColor: 
+      Intensity: 0
+      FadeMs: 0
+      ParticleType: 
+      Rate: 0
+      Scale: 0
+      ThicknessFactor: 1.35
+      FromOrganId: 
+      ToOrganId: 
+      DurationMs: 3000
+    NarrationFallback: Small blood vessels throughout the body remodel and stiffen,
+      narrowing their lumens and reducing oxygen delivery to tissues.
+    AiContext:
+      Physiology: microvascular rarefaction and inward remodeling
+      ClinicalNote: Drives the systemic nature of hypertensive end-organ damage.
+      Audience: 0
+  - StepIndex: 5
+    Stage: intermediate
+    TargetOrganId: kidney_glomerulus
+    MechanismKey: hypertensive_nephrosclerosis_early
+    Severity: 50
+    DelayMs: 14500
+    DurationMs: 3000
+    Effect:
+      Type: 0
+      Color: '#D44545'
+      FromColor: 
+      ToColor: 
+      Intensity: 0.6
+      FadeMs: 0
+      ParticleType: 
+      Rate: 0
+      Scale: 0
+      ThicknessFactor: 0
+      FromOrganId: 
+      ToOrganId: 
+      DurationMs: 0
+    NarrationFallback: The kidney's filtering units sustain damage from sustained
+      pressure, and small amounts of protein begin appearing in the urine.
+    AiContext:
+      Physiology: early hypertensive nephrosclerosis with microalbuminuria
+      ClinicalNote: Microalbuminuria is the earliest detectable sign of hypertensive
+        kidney damage.
+      Audience: 0
+  - StepIndex: 6
+    Stage: intermediate
+    TargetOrganId: eye_retina
+    MechanismKey: hypertensive_retinopathy
+    Severity: 50
+    DelayMs: 17500
+    DurationMs: 3000
+    Effect:
+      Type: 0
+      Color: '#D44545'
+      FromColor: 
+      ToColor: 
+      Intensity: 0.7
+      FadeMs: 0
+      ParticleType: 
+      Rate: 0
+      Scale: 0
+      ThicknessFactor: 0
+      FromOrganId: 
+      ToOrganId: 
+      DurationMs: 0
+    NarrationFallback: Retinal blood vessels narrow and develop characteristic kinks
+      visible on eye examination, signaling systemic vascular damage.
+    AiContext:
+      Physiology: hypertensive retinopathy
+      ClinicalNote: The retina is the only place where small arteries can be examined
+        directly without imaging.
+      Audience: 0
+  - StepIndex: 7
+    Stage: intermediate
+    TargetOrganId: heart_left_ventricle
+    MechanismKey: established_lvh
+    Severity: 65
+    DelayMs: 20500
+    DurationMs: 3000
+    Effect:
+      Type: 5
+      Color: 
+      FromColor: 
+      ToColor: 
+      Intensity: 0
+      FadeMs: 0
+      ParticleType: 
+      Rate: 0
+      Scale: 0
+      ThicknessFactor: 1.4
+      FromOrganId: 
+      ToOrganId: 
+      DurationMs: 3000
+    NarrationFallback: Years of pumping against high pressure produce significant
+      thickening of the left ventricle, reducing its efficiency and increasing oxygen
+      demand.
+    AiContext:
+      Physiology: established concentric left ventricular hypertrophy
+      ClinicalNote: Major risk factor for arrhythmia, heart failure, and sudden cardiac
+        death.
+      Audience: 0
+  - StepIndex: 8
+    Stage: advanced
+    TargetOrganId: brain_cerebrum
+    MechanismKey: small_vessel_cerebral_disease
+    Severity: 75
+    DelayMs: 23500
+    DurationMs: 3500
+    Effect:
+      Type: 1
+      Color: 
+      FromColor: '#E8C8B8'
+      ToColor: '#A85C45'
+      Intensity: 0
+      FadeMs: 3000
+      ParticleType: 
+      Rate: 0
+      Scale: 0
+      ThicknessFactor: 0
+      FromOrganId: 
+      ToOrganId: 
+      DurationMs: 0
+    NarrationFallback: Damage to small cerebral arteries causes microscopic areas
+      of brain tissue death, contributing to cognitive decline and increasing the
+      risk of stroke.
+    AiContext:
+      Physiology: cerebral small vessel disease and lacunar infarcts
+      ClinicalNote: Hypertension triples the risk of stroke and is a leading cause
+        of vascular dementia.
+      Audience: 0
+  - StepIndex: 9
+    Stage: advanced
+    TargetOrganId: kidney_left
+    MechanismKey: hypertensive_ckd
+    Severity: 80
+    DelayMs: 27000
+    DurationMs: 3500
+    Effect:
+      Type: 1
+      Color: 
+      FromColor: '#A85C45'
+      ToColor: '#6B3825'
+      Intensity: 0
+      FadeMs: 3000
+      ParticleType: 
+      Rate: 0
+      Scale: 0
+      ThicknessFactor: 0
+      FromOrganId: 
+      ToOrganId: 
+      DurationMs: 0
+    NarrationFallback: Progressive kidney damage results in chronic kidney disease,
+      with declining filtration capacity and rising waste products in the blood.
+    AiContext:
+      Physiology: hypertensive chronic kidney disease
+      ClinicalNote: Hypertension is the second leading cause of end-stage renal disease
+        worldwide.
+      Audience: 0
+  - StepIndex: 10
+    Stage: advanced
+    TargetOrganId: heart_left_ventricle
+    MechanismKey: heart_failure
+    Severity: 90
+    DelayMs: 30500
+    DurationMs: 3500
+    Effect:
+      Type: 2
+      Color: 
+      FromColor: 
+      ToColor: 
+      Intensity: 0
+      FadeMs: 0
+      ParticleType: inflammation
+      Rate: 35
+      Scale: 0
+      ThicknessFactor: 0
+      FromOrganId: 
+      ToOrganId: 
+      DurationMs: 0
+    NarrationFallback: The thickened, overworked left ventricle eventually loses
+      pumping efficiency, producing heart failure with shortness of breath, fatigue,
+      and fluid retention.
+    AiContext:
+      Physiology: hypertensive heart failure
+      ClinicalNote: Hypertension triples lifetime risk of heart failure.
+      Audience: 0
+  Metadata:
+    Sources:
+    - Mechanisms of target organ damage caused by hypertension (Sciencedirect, 2005)
+    - Pathogenesis of Target Organ Damage in Hypertension (PMC4307277)
+    - Hypertension and Target Organ Damage (PMC4948792)
+    - Pathophysiology of Hypertension Mosaic Theory (PMC8023760)
+    - Systemic and Cardiac Microvascular Dysfunction in Hypertension (PMC11677602)
+    MedicalReviewedBy: 
+    MedicalReviewedDate: 
+    Version: 0.9-pre-review
+    TotalDurationMs: 34000
+    StepCount: 11

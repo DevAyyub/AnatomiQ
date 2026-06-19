@@ -1,0 +1,18 @@
+{
+  "organId": "blood_pressure_systemic",
+  "displayName": "Systemic Blood Pressure",
+  "nodeType": "physiological_state",
+  "fmaId": null,
+  "parentOrganId": null,
+  "system": "cardiovascular",
+  "meshId": null,
+  "description": "Pressure exerted by circulating blood on arterial walls. Sustained elevation damages target organs throughout the body.",
+  "layer": "vascular",
+  "anatomicalRegion": "systemic",
+  "connections": [
+    { "toOrganId": "blood_vessels_systemic", "type": "regulates", "mechanism": "arterial_pressure",
+      "description": "Determines the force on arterial and arteriolar walls" },
+    { "toOrganId": "heart_left_ventricle", "type": "regulates", "mechanism": "afterload",
+      "description": "Defines the resistance the left ventricle must pump against" }
+  ]
+}

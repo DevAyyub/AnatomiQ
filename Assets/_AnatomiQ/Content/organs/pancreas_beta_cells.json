@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "organId": "pancreas_beta_cells",
+  "displayName": "Pancreatic Beta Cells",
+  "nodeType": "anatomical",
+  "fmaId": "FMA62630",
+  "parentOrganId": "pancreas",
+  "system": "endocrine",
+  "meshId": "Body_Pancreas_BetaCells_LOD0",
+  "description": "Insulin-producing cells located in the islets of Langerhans within the pancreas. Central to glucose homeostasis.",
+  "layer": "organs",
+  "anatomicalRegion": "abdomen_upper",
+  "connections": [
+    { "toOrganId": "blood_glucose_serum", "type": "regulates", "mechanism": "insulin_secretion",
+      "description": "Releases insulin in response to elevated blood glucose" },
+    { "toOrganId": "liver", "type": "signals", "mechanism": "insulin_signaling",
+      "description": "Insulin signals liver to convert glucose to glycogen" },
+    { "toOrganId": "tissues_peripheral", "type": "signals", "mechanism": "insulin_signaling",
+      "description": "Insulin enables glucose uptake by muscle and fat tissue" }
+  ],
+  "metadata": { "sources": ["Gray's Anatomy 41st ed.", "FMA Ontology"], "lastReviewed": null }
+}

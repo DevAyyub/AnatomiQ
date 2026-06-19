@@ -1,0 +1,16 @@
+{
+  "organId": "blood_vessels_coronary",
+  "displayName": "Coronary Arteries",
+  "nodeType": "anatomical",
+  "fmaId": "FMA50047",
+  "parentOrganId": null,
+  "system": "cardiovascular",
+  "meshId": "Body_Vessels_Coronary_LOD0",
+  "description": "Arteries supplying the heart muscle itself. Critical for cardiac function; narrowing causes ischemic heart disease.",
+  "layer": "vascular",
+  "anatomicalRegion": "chest_anterior",
+  "connections": [
+    { "toOrganId": "heart_left_ventricle", "type": "supplies_blood", "mechanism": "myocardial_perfusion",
+      "description": "Supplies oxygenated blood to ventricular myocardium" }
+  ]
+}

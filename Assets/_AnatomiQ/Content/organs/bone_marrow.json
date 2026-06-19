@@ -1,0 +1,16 @@
+{
+  "organId": "bone_marrow",
+  "displayName": "Bone Marrow",
+  "nodeType": "anatomical",
+  "fmaId": "FMA9608",
+  "parentOrganId": "bone_skeletal_general",
+  "system": "lymphatic",
+  "meshId": "Body_BoneMarrow_LOD0",
+  "description": "Soft tissue inside bones; site of red and white blood cell production. Stimulated by erythropoietin from the kidneys.",
+  "layer": "skeletal",
+  "anatomicalRegion": "systemic",
+  "connections": [
+    { "toOrganId": "blood_red_cells", "type": "produces", "mechanism": "erythropoiesis",
+      "description": "Produces red blood cells in response to erythropoietin" }
+  ]
+}

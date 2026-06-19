@@ -1,0 +1,16 @@
+{
+  "organId": "serum_phosphate",
+  "displayName": "Serum Phosphate Level",
+  "nodeType": "physiological_state",
+  "fmaId": null,
+  "parentOrganId": null,
+  "system": "urinary",
+  "meshId": null,
+  "description": "Circulating phosphate concentration. Excreted by the kidneys; rises in CKD and drives mineral bone disease.",
+  "layer": "vascular",
+  "anatomicalRegion": "systemic",
+  "connections": [
+    { "toOrganId": "kidney_left", "type": "filters", "mechanism": "renal_excretion",
+      "description": "Excreted by the kidneys; retention occurs as renal function declines" }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "organId": "bone_skeletal_general",
+  "displayName": "Skeletal System",
+  "nodeType": "anatomical",
+  "fmaId": "FMA23881",
+  "parentOrganId": null,
+  "system": "skeletal",
+  "meshId": "Body_Skeleton_LOD0",
+  "description": "Full bone framework. Site of calcium storage and bone marrow. Mineral homeostasis is regulated by parathyroid hormone, calcitonin, and vitamin D.",
+  "layer": "skeletal",
+  "anatomicalRegion": "systemic",
+  "connections": [
+    { "toOrganId": "bone_marrow", "type": "contains", "mechanism": "structural",
+      "description": "Contains bone marrow within trabecular spaces" }
+  ]
+}

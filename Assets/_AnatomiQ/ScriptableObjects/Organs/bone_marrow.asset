@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a23c73c4d1dbd540b46ca7a38067d8c, type: 3}
+  m_Name: bone_marrow
+  m_EditorClassIdentifier: AnatomiQ.Data::AnatomiQ.Data.OrganAsset
+  SchemaVersion: 1
+  OrganId: bone_marrow
+  DisplayName: Bone Marrow
+  NodeType: 0
+  FmaId: FMA9608
+  ParentOrganId: bone_skeletal_general
+  System: 4
+  MeshId: Body_BoneMarrow_LOD0
+  Description: Soft tissue inside bones; site of red and white blood cell production.
+    Stimulated by erythropoietin from the kidneys.
+  Layer: 0
+  Region: 11
+  Connections:
+  - ToOrganId: blood_red_cells
+    Type: 6
+    Mechanism: erythropoiesis
+    Description: Produces red blood cells in response to erythropoietin
+  Metadata:
+    Sources: []
+    LastReviewed: 

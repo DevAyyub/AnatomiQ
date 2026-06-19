@@ -1,0 +1,16 @@
+{
+  "organId": "kidney_glomerulus",
+  "displayName": "Renal Glomerulus",
+  "nodeType": "anatomical",
+  "fmaId": "FMA15624",
+  "parentOrganId": "kidney_left",
+  "system": "urinary",
+  "meshId": "Body_Kidney_Glomerulus_LOD0",
+  "description": "Tuft of capillaries within the kidney where blood filtration occurs. Damage causes proteinuria and reduced filtration.",
+  "layer": "organs",
+  "anatomicalRegion": "abdomen_upper",
+  "connections": [
+    { "toOrganId": "blood_vessels_systemic", "type": "filters", "mechanism": "glomerular_filtration",
+      "description": "Filters plasma to form primary urine" }
+  ]
+}

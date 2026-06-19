@@ -1,0 +1,272 @@
+{
+  "schemaVersion": 1,
+  "diseaseId": "essential_hypertension",
+  "displayName": "Essential Hypertension",
+  "shortLabel": "Hypertension",
+  "category": "cardiovascular",
+  "icd10": "I10",
+  "description": "Chronically elevated systemic arterial pressure of unknown specific cause. Sustained elevation damages target organs through microvascular dysfunction, endothelial injury, and pressure-induced structural remodeling, primarily affecting heart, kidneys, brain, retina, and large vessels.",
+  "entryOrganId": "blood_pressure_systemic",
+
+  "stages": [
+    {
+      "stageId": "early",
+      "label": "Early (0–5 years)",
+      "description": "Sustained elevated blood pressure begins inducing endothelial dysfunction and microvascular changes. Often asymptomatic.",
+      "stepIndices": [0, 1, 2, 3]
+    },
+    {
+      "stageId": "intermediate",
+      "label": "Intermediate (5–15 years)",
+      "description": "Cardiac structural changes develop. Microvascular damage spreads to retina, kidneys, and brain. Early end-organ damage detectable.",
+      "stepIndices": [4, 5, 6, 7]
+    },
+    {
+      "stageId": "advanced",
+      "label": "Advanced (15+ years)",
+      "description": "Established target organ damage. Increased risk of stroke, heart failure, chronic kidney disease, and vision loss.",
+      "stepIndices": [8, 9, 10]
+    }
+  ],
+
+  "cascade": [
+    {
+      "stepIndex": 0,
+      "stage": "early",
+      "targetOrganId": "blood_pressure_systemic",
+      "mechanismKey": "sustained_pressure_elevation",
+      "severity": 30,
+      "delayMs": 0,
+      "durationMs": 3000,
+      "visualEffect": {
+        "type": "highlight_pulse",
+        "color": "#FF4040",
+        "intensity": 0.5
+      },
+      "narrationFallback": "Systemic blood pressure rises and remains elevated, exerting greater force against arterial walls throughout the body.",
+      "aiContext": {
+        "physiology": "sustained systemic hypertension",
+        "clinicalNote": "Often asymptomatic; detected on routine checks. Defined as ≥130/80 mmHg per current guidelines.",
+        "audience": "general"
+      }
+    },
+    {
+      "stepIndex": 1,
+      "stage": "early",
+      "targetOrganId": "blood_vessels_systemic",
+      "mechanismKey": "endothelial_dysfunction",
+      "severity": 35,
+      "delayMs": 2500,
+      "durationMs": 3000,
+      "visualEffect": {
+        "type": "color_change",
+        "fromColor": "#C44545",
+        "toColor": "#A53333",
+        "fadeMs": 2500
+      },
+      "narrationFallback": "The inner lining of blood vessels — the endothelium — begins to malfunction under sustained pressure, reducing nitric oxide and impairing vessel relaxation.",
+      "aiContext": {
+        "physiology": "endothelial dysfunction with reduced NO bioavailability",
+        "clinicalNote": "The earliest reversible stage; aggressive blood pressure control here can prevent later complications.",
+        "audience": "general"
+      }
+    },
+    {
+      "stepIndex": 2,
+      "stage": "early",
+      "targetOrganId": "arteries_large",
+      "mechanismKey": "arterial_stiffening",
+      "severity": 40,
+      "delayMs": 5000,
+      "durationMs": 3000,
+      "visualEffect": {
+        "type": "thicken",
+        "thicknessFactor": 1.2,
+        "durationMs": 2500
+      },
+      "narrationFallback": "Large arteries begin to stiffen as elastin fibers are gradually replaced by collagen, reducing their ability to buffer the heart's pulsing flow.",
+      "aiContext": {
+        "physiology": "arterial stiffening and reduced compliance",
+        "clinicalNote": "Detectable as widening pulse pressure on standard blood pressure measurement.",
+        "audience": "general"
+      }
+    },
+    {
+      "stepIndex": 3,
+      "stage": "early",
+      "targetOrganId": "heart_left_ventricle",
+      "mechanismKey": "compensatory_lvh_early",
+      "severity": 35,
+      "delayMs": 8000,
+      "durationMs": 3000,
+      "visualEffect": {
+        "type": "thicken",
+        "thicknessFactor": 1.15,
+        "durationMs": 3000
+      },
+      "narrationFallback": "The left ventricle begins to thicken as it works harder to pump blood against increased arterial pressure.",
+      "aiContext": {
+        "physiology": "early left ventricular hypertrophy",
+        "clinicalNote": "Visible on echocardiogram before symptoms develop.",
+        "audience": "general"
+      }
+    },
+    {
+      "stepIndex": 4,
+      "stage": "intermediate",
+      "targetOrganId": "blood_vessels_systemic",
+      "mechanismKey": "microvascular_remodeling",
+      "severity": 55,
+      "delayMs": 11500,
+      "durationMs": 3000,
+      "visualEffect": {
+        "type": "thicken",
+        "thicknessFactor": 1.35,
+        "durationMs": 3000
+      },
+      "narrationFallback": "Small blood vessels throughout the body remodel and stiffen, narrowing their lumens and reducing oxygen delivery to tissues.",
+      "aiContext": {
+        "physiology": "microvascular rarefaction and inward remodeling",
+        "clinicalNote": "Drives the systemic nature of hypertensive end-organ damage.",
+        "audience": "general"
+      }
+    },
+    {
+      "stepIndex": 5,
+      "stage": "intermediate",
+      "targetOrganId": "kidney_glomerulus",
+      "mechanismKey": "hypertensive_nephrosclerosis_early",
+      "severity": 50,
+      "delayMs": 14500,
+      "durationMs": 3000,
+      "visualEffect": {
+        "type": "highlight_pulse",
+        "color": "#D44545",
+        "intensity": 0.6
+      },
+      "narrationFallback": "The kidney's filtering units sustain damage from sustained pressure, and small amounts of protein begin appearing in the urine.",
+      "aiContext": {
+        "physiology": "early hypertensive nephrosclerosis with microalbuminuria",
+        "clinicalNote": "Microalbuminuria is the earliest detectable sign of hypertensive kidney damage.",
+        "audience": "general"
+      }
+    },
+    {
+      "stepIndex": 6,
+      "stage": "intermediate",
+      "targetOrganId": "eye_retina",
+      "mechanismKey": "hypertensive_retinopathy",
+      "severity": 50,
+      "delayMs": 17500,
+      "durationMs": 3000,
+      "visualEffect": {
+        "type": "highlight_pulse",
+        "color": "#D44545",
+        "intensity": 0.7
+      },
+      "narrationFallback": "Retinal blood vessels narrow and develop characteristic kinks visible on eye examination, signaling systemic vascular damage.",
+      "aiContext": {
+        "physiology": "hypertensive retinopathy",
+        "clinicalNote": "The retina is the only place where small arteries can be examined directly without imaging.",
+        "audience": "general"
+      }
+    },
+    {
+      "stepIndex": 7,
+      "stage": "intermediate",
+      "targetOrganId": "heart_left_ventricle",
+      "mechanismKey": "established_lvh",
+      "severity": 65,
+      "delayMs": 20500,
+      "durationMs": 3000,
+      "visualEffect": {
+        "type": "thicken",
+        "thicknessFactor": 1.4,
+        "durationMs": 3000
+      },
+      "narrationFallback": "Years of pumping against high pressure produce significant thickening of the left ventricle, reducing its efficiency and increasing oxygen demand.",
+      "aiContext": {
+        "physiology": "established concentric left ventricular hypertrophy",
+        "clinicalNote": "Major risk factor for arrhythmia, heart failure, and sudden cardiac death.",
+        "audience": "general"
+      }
+    },
+    {
+      "stepIndex": 8,
+      "stage": "advanced",
+      "targetOrganId": "brain_cerebrum",
+      "mechanismKey": "small_vessel_cerebral_disease",
+      "severity": 75,
+      "delayMs": 23500,
+      "durationMs": 3500,
+      "visualEffect": {
+        "type": "color_change",
+        "fromColor": "#E8C8B8",
+        "toColor": "#A85C45",
+        "fadeMs": 3000
+      },
+      "narrationFallback": "Damage to small cerebral arteries causes microscopic areas of brain tissue death, contributing to cognitive decline and increasing the risk of stroke.",
+      "aiContext": {
+        "physiology": "cerebral small vessel disease and lacunar infarcts",
+        "clinicalNote": "Hypertension triples the risk of stroke and is a leading cause of vascular dementia.",
+        "audience": "general"
+      }
+    },
+    {
+      "stepIndex": 9,
+      "stage": "advanced",
+      "targetOrganId": "kidney_left",
+      "mechanismKey": "hypertensive_ckd",
+      "severity": 80,
+      "delayMs": 27000,
+      "durationMs": 3500,
+      "visualEffect": {
+        "type": "color_change",
+        "fromColor": "#A85C45",
+        "toColor": "#6B3825",
+        "fadeMs": 3000
+      },
+      "narrationFallback": "Progressive kidney damage results in chronic kidney disease, with declining filtration capacity and rising waste products in the blood.",
+      "aiContext": {
+        "physiology": "hypertensive chronic kidney disease",
+        "clinicalNote": "Hypertension is the second leading cause of end-stage renal disease worldwide.",
+        "audience": "general"
+      }
+    },
+    {
+      "stepIndex": 10,
+      "stage": "advanced",
+      "targetOrganId": "heart_left_ventricle",
+      "mechanismKey": "heart_failure",
+      "severity": 90,
+      "delayMs": 30500,
+      "durationMs": 3500,
+      "visualEffect": {
+        "type": "particle_emit",
+        "particleType": "inflammation",
+        "rate": 35
+      },
+      "narrationFallback": "The thickened, overworked left ventricle eventually loses pumping efficiency, producing heart failure with shortness of breath, fatigue, and fluid retention.",
+      "aiContext": {
+        "physiology": "hypertensive heart failure",
+        "clinicalNote": "Hypertension triples lifetime risk of heart failure.",
+        "audience": "general"
+      }
+    }
+  ],
+
+  "metadata": {
+    "sources": [
+      "Mechanisms of target organ damage caused by hypertension (Sciencedirect, 2005)",
+      "Pathogenesis of Target Organ Damage in Hypertension (PMC4307277)",
+      "Hypertension and Target Organ Damage (PMC4948792)",
+      "Pathophysiology of Hypertension Mosaic Theory (PMC8023760)",
+      "Systemic and Cardiac Microvascular Dysfunction in Hypertension (PMC11677602)"
+    ],
+    "medicalReviewedBy": null,
+    "medicalReviewedDate": null,
+    "version": "0.9-pre-review",
+    "totalDurationMs": 34000,
+    "stepCount": 11
+  }
+}

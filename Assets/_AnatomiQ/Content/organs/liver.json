@@ -1,0 +1,16 @@
+{
+  "organId": "liver",
+  "displayName": "Liver",
+  "nodeType": "anatomical",
+  "fmaId": "FMA7197",
+  "parentOrganId": null,
+  "system": "digestive",
+  "meshId": "Body_Liver_LOD0",
+  "description": "Largest internal organ, central to metabolism, glycogen storage, and detoxification.",
+  "layer": "organs",
+  "anatomicalRegion": "abdomen_upper",
+  "connections": [
+    { "toOrganId": "blood_glucose_serum", "type": "regulates", "mechanism": "glycogen_storage",
+      "description": "Stores excess glucose as glycogen and releases it under glucagon stimulation" }
+  ]
+}

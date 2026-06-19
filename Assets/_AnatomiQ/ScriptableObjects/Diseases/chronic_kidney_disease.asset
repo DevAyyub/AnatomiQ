@@ -1,0 +1,370 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 85d6d3d56ef0e2449a6eb0497f72471f, type: 3}
+  m_Name: chronic_kidney_disease
+  m_EditorClassIdentifier: AnatomiQ.Data::AnatomiQ.Data.DiseaseAsset
+  SchemaVersion: 1
+  DiseaseId: chronic_kidney_disease
+  DisplayName: Chronic Kidney Disease
+  ShortLabel: Chronic Kidney Disease
+  Category: 4
+  Icd10Code: N18
+  Description: 'Progressive loss of kidney function over months to years, regardless
+    of cause. As filtration declines, multiple downstream complications develop:
+    anemia from reduced erythropoietin, mineral and bone disease from disrupted calcium-phosphate
+    balance, cardiovascular disease, and ultimately end-stage renal failure requiring
+    dialysis or transplant.'
+  EntryOrganId: kidney_glomerulus
+  Stages:
+  - StageId: early
+    Label: "Early \u2014 Stages 1\u20132 (eGFR \u226560)"
+    Description: Detectable kidney damage with preserved or mildly reduced filtration.
+      Often asymptomatic. Markers like proteinuria appear.
+    StepIndices: 000000000100000002000000
+  - StageId: intermediate
+    Label: "Intermediate \u2014 Stage 3 (eGFR 30\u201359)"
+    Description: Moderate reduction in filtration. Erythropoietin and vitamin D metabolism
+      become impaired. Anemia and early bone disease begin.
+    StepIndices: 03000000040000000500000006000000
+  - StageId: advanced
+    Label: "Advanced \u2014 Stages 4\u20135 (eGFR <30)"
+    Description: Severe loss of kidney function approaching end-stage renal disease.
+      Multiple systemic complications including significant cardiovascular disease.
+    StepIndices: 0700000008000000090000000a000000
+  Cascade:
+  - StepIndex: 0
+    Stage: early
+    TargetOrganId: kidney_glomerulus
+    MechanismKey: glomerular_damage_initial
+    Severity: 30
+    DelayMs: 0
+    DurationMs: 3000
+    Effect:
+      Type: 0
+      Color: '#FFB800'
+      FromColor: 
+      ToColor: 
+      Intensity: 0.5
+      FadeMs: 0
+      ParticleType: 
+      Rate: 0
+      Scale: 0
+      ThicknessFactor: 0
+      FromOrganId: 
+      ToOrganId: 
+      DurationMs: 0
+    NarrationFallback: Glomerular filtration units begin sustaining damage from underlying
+      causes such as diabetes, hypertension, or autoimmune disease.
+    AiContext:
+      Physiology: early glomerular injury
+      ClinicalNote: Most CKD is caused by diabetes or hypertension, but many other
+        causes exist.
+      Audience: 0
+  - StepIndex: 1
+    Stage: early
+    TargetOrganId: kidney_left
+    MechanismKey: proteinuria_onset
+    Severity: 35
+    DelayMs: 2500
+    DurationMs: 3000
+    Effect:
+      Type: 1
+      Color: 
+      FromColor: '#A85C45'
+      ToColor: '#8B4830'
+      Intensity: 0
+      FadeMs: 2500
+      ParticleType: 
+      Rate: 0
+      Scale: 0
+      ThicknessFactor: 0
+      FromOrganId: 
+      ToOrganId: 
+      DurationMs: 0
+    NarrationFallback: Damaged kidney filters allow protein to leak into the urine,
+      an early warning sign detectable on a urine test.
+    AiContext:
+      Physiology: albuminuria as early CKD marker
+      ClinicalNote: Microalbuminuria is the earliest detectable sign and a key predictor
+        of progression.
+      Audience: 0
+  - StepIndex: 2
+    Stage: early
+    TargetOrganId: blood_pressure_systemic
+    MechanismKey: renal_hypertension
+    Severity: 45
+    DelayMs: 5000
+    DurationMs: 3000
+    Effect:
+      Type: 0
+      Color: '#FF4040'
+      FromColor: 
+      ToColor: 
+      Intensity: 0.6
+      FadeMs: 0
+      ParticleType: 
+      Rate: 0
+      Scale: 0
+      ThicknessFactor: 0
+      FromOrganId: 
+      ToOrganId: 
+      DurationMs: 0
+    NarrationFallback: Damaged kidneys disrupt fluid and hormone balance, raising
+      systemic blood pressure and creating a self-reinforcing cycle of further kidney
+      damage.
+    AiContext:
+      Physiology: renin-angiotensin-aldosterone activation in CKD
+      ClinicalNote: CKD and hypertension worsen each other; controlling blood pressure
+        is essential to slow CKD progression.
+      Audience: 0
+  - StepIndex: 3
+    Stage: intermediate
+    TargetOrganId: kidney_left
+    MechanismKey: epo_synthesis_decline
+    Severity: 55
+    DelayMs: 8000
+    DurationMs: 3000
+    Effect:
+      Type: 4
+      Color: 
+      FromColor: 
+      ToColor: 
+      Intensity: 0
+      FadeMs: 0
+      ParticleType: 
+      Rate: 0
+      Scale: 0.93
+      ThicknessFactor: 0
+      FromOrganId: 
+      ToOrganId: 
+      DurationMs: 2500
+    NarrationFallback: "As functional kidney tissue is lost, the kidneys produce
+      less erythropoietin \u2014 the hormone that tells bone marrow to make red blood
+      cells."
+    AiContext:
+      Physiology: decreased erythropoietin synthesis from tubulointerstitial fibrosis
+      ClinicalNote: Erythropoietin deficiency is the primary mechanism of CKD-associated
+        anemia.
+      Audience: 0
+  - StepIndex: 4
+    Stage: intermediate
+    TargetOrganId: bone_marrow
+    MechanismKey: reduced_erythropoiesis
+    Severity: 55
+    DelayMs: 11500
+    DurationMs: 3000
+    Effect:
+      Type: 1
+      Color: 
+      FromColor: '#D44545'
+      ToColor: '#9B3535'
+      Intensity: 0
+      FadeMs: 3000
+      ParticleType: 
+      Rate: 0
+      Scale: 0
+      ThicknessFactor: 0
+      FromOrganId: 
+      ToOrganId: 
+      DurationMs: 0
+    NarrationFallback: With less erythropoietin reaching it, bone marrow produces
+      fewer red blood cells, leading to anemia and chronic fatigue.
+    AiContext:
+      Physiology: anemia of chronic kidney disease
+      ClinicalNote: Affects 8% at stage 1 and over 50% at stage 5. Treatable with
+        EPO-stimulating agents and iron.
+      Audience: 0
+  - StepIndex: 5
+    Stage: intermediate
+    TargetOrganId: serum_phosphate
+    MechanismKey: phosphate_retention
+    Severity: 50
+    DelayMs: 14500
+    DurationMs: 3000
+    Effect:
+      Type: 0
+      Color: '#FF8040'
+      FromColor: 
+      ToColor: 
+      Intensity: 0.6
+      FadeMs: 0
+      ParticleType: 
+      Rate: 0
+      Scale: 0
+      ThicknessFactor: 0
+      FromOrganId: 
+      ToOrganId: 
+      DurationMs: 0
+    NarrationFallback: Failing kidneys can no longer fully excrete phosphate, allowing
+      levels to rise in the blood and disrupting calcium balance.
+    AiContext:
+      Physiology: hyperphosphatemia from reduced renal excretion
+      ClinicalNote: Phosphate retention drives much of CKD bone disease and cardiovascular
+        calcification.
+      Audience: 0
+  - StepIndex: 6
+    Stage: intermediate
+    TargetOrganId: parathyroid_glands
+    MechanismKey: secondary_hyperparathyroidism
+    Severity: 60
+    DelayMs: 17500
+    DurationMs: 3000
+    Effect:
+      Type: 0
+      Color: '#FFB800'
+      FromColor: 
+      ToColor: 
+      Intensity: 0.7
+      FadeMs: 0
+      ParticleType: 
+      Rate: 0
+      Scale: 0
+      ThicknessFactor: 0
+      FromOrganId: 
+      ToOrganId: 
+      DurationMs: 0
+    NarrationFallback: In response to high phosphate and low active vitamin D, the
+      parathyroid glands grow and secrete excess parathyroid hormone, attempting
+      to correct the imbalance.
+    AiContext:
+      Physiology: secondary hyperparathyroidism in CKD-MBD
+      ClinicalNote: Initially adaptive, but chronic overactivation drives bone disease
+        and vascular calcification.
+      Audience: 0
+  - StepIndex: 7
+    Stage: advanced
+    TargetOrganId: bone_skeletal_general
+    MechanismKey: renal_osteodystrophy
+    Severity: 75
+    DelayMs: 20500
+    DurationMs: 3500
+    Effect:
+      Type: 1
+      Color: 
+      FromColor: '#E8DCC0'
+      ToColor: '#B8A080'
+      Intensity: 0
+      FadeMs: 3000
+      ParticleType: 
+      Rate: 0
+      Scale: 0
+      ThicknessFactor: 0
+      FromOrganId: 
+      ToOrganId: 
+      DurationMs: 0
+    NarrationFallback: Sustained parathyroid hormone elevation pulls calcium from
+      the bones, weakening the skeleton and causing bone pain, deformity, and fracture
+      risk.
+    AiContext:
+      Physiology: chronic kidney disease mineral and bone disorder (CKD-MBD)
+      ClinicalNote: Spectrum includes high-turnover, low-turnover, and mixed bone
+        disease.
+      Audience: 0
+  - StepIndex: 8
+    Stage: advanced
+    TargetOrganId: blood_vessels_systemic
+    MechanismKey: vascular_calcification
+    Severity: 75
+    DelayMs: 24000
+    DurationMs: 3500
+    Effect:
+      Type: 5
+      Color: 
+      FromColor: 
+      ToColor: 
+      Intensity: 0
+      FadeMs: 0
+      ParticleType: 
+      Rate: 0
+      Scale: 0
+      ThicknessFactor: 1.45
+      FromOrganId: 
+      ToOrganId: 
+      DurationMs: 3500
+    NarrationFallback: Calcium displaced from bone, combined with high phosphate,
+      deposits in arterial walls, accelerating vascular stiffening and cardiovascular
+      risk.
+    AiContext:
+      Physiology: vascular calcification in CKD-MBD
+      ClinicalNote: A key reason cardiovascular disease causes most deaths in CKD
+        patients.
+      Audience: 0
+  - StepIndex: 9
+    Stage: advanced
+    TargetOrganId: heart_left_ventricle
+    MechanismKey: cardiorenal_syndrome
+    Severity: 85
+    DelayMs: 27500
+    DurationMs: 3500
+    Effect:
+      Type: 5
+      Color: 
+      FromColor: 
+      ToColor: 
+      Intensity: 0
+      FadeMs: 0
+      ParticleType: 
+      Rate: 0
+      Scale: 0
+      ThicknessFactor: 1.5
+      FromOrganId: 
+      ToOrganId: 
+      DurationMs: 3500
+    NarrationFallback: The combination of anemia, fluid overload, hypertension, and
+      vascular calcification overburdens the heart, producing left ventricular hypertrophy
+      and progressive heart failure.
+    AiContext:
+      Physiology: cardiorenal anemia syndrome
+      ClinicalNote: Cardiovascular disease accounts for the majority of mortality
+        in CKD.
+      Audience: 0
+  - StepIndex: 10
+    Stage: advanced
+    TargetOrganId: kidney_left
+    MechanismKey: end_stage_renal_disease
+    Severity: 95
+    DelayMs: 31000
+    DurationMs: 4000
+    Effect:
+      Type: 4
+      Color: 
+      FromColor: 
+      ToColor: 
+      Intensity: 0
+      FadeMs: 0
+      ParticleType: 
+      Rate: 0
+      Scale: 0.7
+      ThicknessFactor: 0
+      FromOrganId: 
+      ToOrganId: 
+      DurationMs: 3500
+    NarrationFallback: Kidney function falls below the threshold required to sustain
+      life. Dialysis or kidney transplantation becomes necessary.
+    AiContext:
+      Physiology: end-stage renal disease, eGFR <15
+      ClinicalNote: Without renal replacement therapy, ESRD is fatal within weeks
+        to months.
+      Audience: 0
+  Metadata:
+    Sources:
+    - "StatPearls \u2014 Chronic Kidney Disease (NCBI, 2024)"
+    - "StatPearls \u2014 End-Stage Renal Disease (NCBI, 2025)"
+    - Chronic Kidney Disease and Its Complications (PMC2474786)
+    - Bone and bone derived factors in kidney disease (PMC10941011)
+    - AMBOSS Chronic Kidney Disease
+    - KDIGO Clinical Practice Guidelines for CKD (2024)
+    MedicalReviewedBy: 
+    MedicalReviewedDate: 
+    Version: 0.9-pre-review
+    TotalDurationMs: 35000
+    StepCount: 11

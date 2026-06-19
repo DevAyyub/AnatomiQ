@@ -1,0 +1,351 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 85d6d3d56ef0e2449a6eb0497f72471f, type: 3}
+  m_Name: t2_diabetes
+  m_EditorClassIdentifier: AnatomiQ.Data::AnatomiQ.Data.DiseaseAsset
+  SchemaVersion: 1
+  DiseaseId: t2_diabetes
+  DisplayName: Type 2 Diabetes Mellitus
+  ShortLabel: Type 2 Diabetes
+  Category: 0
+  Icd10Code: E11
+  Description: A chronic metabolic disorder characterized by insulin resistance and
+    progressive pancreatic beta cell dysfunction, leading to sustained hyperglycemia
+    and progressive multi-organ complications affecting the cardiovascular, renal,
+    ocular, and nervous systems.
+  EntryOrganId: pancreas_beta_cells
+  Stages:
+  - StageId: early
+    Label: "Early (0\u20135 years)"
+    Description: Insulin resistance develops; pancreas compensates with hyperinsulinemia;
+      blood glucose begins to rise.
+    StepIndices: 00000000010000000200000003000000
+  - StageId: intermediate
+    Label: "Intermediate (5\u201315 years)"
+    Description: Beta cell function declines; sustained hyperglycemia damages microvasculature;
+      early end-organ changes.
+    StepIndices: 04000000050000000600000007000000
+  - StageId: advanced
+    Label: Advanced (15+ years)
+    Description: Established microvascular and macrovascular complications across
+      multiple organ systems.
+    StepIndices: 08000000090000000a000000
+  Cascade:
+  - StepIndex: 0
+    Stage: early
+    TargetOrganId: pancreas_beta_cells
+    MechanismKey: beta_cell_hyperinsulinemia
+    Severity: 25
+    DelayMs: 0
+    DurationMs: 3000
+    Effect:
+      Type: 0
+      Color: '#FFB800'
+      FromColor: 
+      ToColor: 
+      Intensity: 0.5
+      FadeMs: 0
+      ParticleType: 
+      Rate: 0
+      Scale: 0
+      ThicknessFactor: 0
+      FromOrganId: 
+      ToOrganId: 
+      DurationMs: 0
+    NarrationFallback: Pancreatic beta cells become hypersensitive to glucose and
+      begin secreting excess insulin to compensate for rising tissue insulin resistance.
+    AiContext:
+      Physiology: compensatory hyperinsulinemia
+      ClinicalNote: Asymptomatic phase, often missed without targeted screening.
+      Audience: 0
+  - StepIndex: 1
+    Stage: early
+    TargetOrganId: tissues_peripheral
+    MechanismKey: insulin_resistance
+    Severity: 35
+    DelayMs: 2500
+    DurationMs: 3000
+    Effect:
+      Type: 1
+      Color: 
+      FromColor: '#E8B5A8'
+      ToColor: '#D49888'
+      Intensity: 0
+      FadeMs: 2500
+      ParticleType: 
+      Rate: 0
+      Scale: 0
+      ThicknessFactor: 0
+      FromOrganId: 
+      ToOrganId: 
+      DurationMs: 0
+    NarrationFallback: Muscle and fat tissues progressively lose sensitivity to insulin,
+      requiring ever-higher insulin levels to maintain normal glucose uptake.
+    AiContext:
+      Physiology: peripheral insulin resistance
+      ClinicalNote: Linked to obesity, sedentary lifestyle, and genetic predisposition.
+      Audience: 0
+  - StepIndex: 2
+    Stage: early
+    TargetOrganId: blood_glucose_serum
+    MechanismKey: hyperglycemia_onset
+    Severity: 45
+    DelayMs: 5000
+    DurationMs: 3000
+    Effect:
+      Type: 1
+      Color: 
+      FromColor: '#C44545'
+      ToColor: '#E8A040'
+      Intensity: 0
+      FadeMs: 2500
+      ParticleType: 
+      Rate: 0
+      Scale: 0
+      ThicknessFactor: 0
+      FromOrganId: 
+      ToOrganId: 
+      DurationMs: 0
+    NarrationFallback: Despite elevated insulin, blood glucose rises above the normal
+      range as compensation begins to fail. This marks the clinical onset of diabetes.
+    AiContext:
+      Physiology: sustained hyperglycemia
+      ClinicalNote: HbA1c crosses 6.5% threshold for diagnosis.
+      Audience: 0
+  - StepIndex: 3
+    Stage: early
+    TargetOrganId: kidney_glomerulus
+    MechanismKey: glomerular_hyperfiltration
+    Severity: 30
+    DelayMs: 8000
+    DurationMs: 3000
+    Effect:
+      Type: 0
+      Color: '#FFA040'
+      FromColor: 
+      ToColor: 
+      Intensity: 0.5
+      FadeMs: 0
+      ParticleType: 
+      Rate: 0
+      Scale: 0
+      ThicknessFactor: 0
+      FromOrganId: 
+      ToOrganId: 
+      DurationMs: 0
+    NarrationFallback: The kidneys initially respond to high blood glucose by increasing
+      filtration rate, a phase known as glomerular hyperfiltration.
+    AiContext:
+      Physiology: early diabetic nephropathy hyperfiltration phase
+      ClinicalNote: Reversible if glycemic control achieved.
+      Audience: 0
+  - StepIndex: 4
+    Stage: intermediate
+    TargetOrganId: pancreas_beta_cells
+    MechanismKey: beta_cell_exhaustion
+    Severity: 65
+    DelayMs: 11500
+    DurationMs: 3000
+    Effect:
+      Type: 4
+      Color: 
+      FromColor: 
+      ToColor: 
+      Intensity: 0
+      FadeMs: 0
+      ParticleType: 
+      Rate: 0
+      Scale: 0.88
+      ThicknessFactor: 0
+      FromOrganId: 
+      ToOrganId: 
+      DurationMs: 2500
+    NarrationFallback: Years of overwork drive beta cell exhaustion. Insulin output
+      progressively declines, accelerating the rise in blood glucose.
+    AiContext:
+      Physiology: beta cell apoptosis and dysfunction
+      ClinicalNote: Many patients now require oral medications or insulin.
+      Audience: 0
+  - StepIndex: 5
+    Stage: intermediate
+    TargetOrganId: blood_vessels_systemic
+    MechanismKey: microvascular_basement_thickening
+    Severity: 55
+    DelayMs: 14500
+    DurationMs: 3000
+    Effect:
+      Type: 5
+      Color: 
+      FromColor: 
+      ToColor: 
+      Intensity: 0
+      FadeMs: 0
+      ParticleType: 
+      Rate: 0
+      Scale: 0
+      ThicknessFactor: 1.3
+      FromOrganId: 
+      ToOrganId: 
+      DurationMs: 3000
+    NarrationFallback: Sustained high glucose causes thickening of small blood vessel
+      walls throughout the body, reducing oxygen delivery to tissues.
+    AiContext:
+      Physiology: advanced glycation end products and microvascular damage
+      ClinicalNote: The mechanism behind the major complications that follow.
+      Audience: 0
+  - StepIndex: 6
+    Stage: intermediate
+    TargetOrganId: eye_retina
+    MechanismKey: diabetic_retinopathy_early
+    Severity: 50
+    DelayMs: 17500
+    DurationMs: 3000
+    Effect:
+      Type: 0
+      Color: '#D44545'
+      FromColor: 
+      ToColor: 
+      Intensity: 0.7
+      FadeMs: 0
+      ParticleType: 
+      Rate: 0
+      Scale: 0
+      ThicknessFactor: 0
+      FromOrganId: 
+      ToOrganId: 
+      DurationMs: 0
+    NarrationFallback: Damaged retinal capillaries begin to leak and form microaneurysms,
+      the earliest visible sign of diabetic eye disease.
+    AiContext:
+      Physiology: non-proliferative diabetic retinopathy
+      ClinicalNote: Often asymptomatic until significant; annual eye exams critical.
+      Audience: 0
+  - StepIndex: 7
+    Stage: intermediate
+    TargetOrganId: nerves_peripheral_lower
+    MechanismKey: diabetic_neuropathy_early
+    Severity: 45
+    DelayMs: 20500
+    DurationMs: 3000
+    Effect:
+      Type: 1
+      Color: 
+      FromColor: '#FFE8C8'
+      ToColor: '#D49888'
+      Intensity: 0
+      FadeMs: 2500
+      ParticleType: 
+      Rate: 0
+      Scale: 0
+      ThicknessFactor: 0
+      FromOrganId: 
+      ToOrganId: 
+      DurationMs: 0
+    NarrationFallback: Peripheral nerves, especially in the feet and legs, lose function
+      due to vascular damage. Patients may notice tingling or reduced sensation.
+    AiContext:
+      Physiology: distal symmetric polyneuropathy
+      ClinicalNote: Increases risk of unnoticed foot injuries and ulcers.
+      Audience: 0
+  - StepIndex: 8
+    Stage: advanced
+    TargetOrganId: kidney_left
+    MechanismKey: chronic_kidney_disease
+    Severity: 80
+    DelayMs: 23500
+    DurationMs: 3500
+    Effect:
+      Type: 1
+      Color: 
+      FromColor: '#A85C45'
+      ToColor: '#6B3825'
+      Intensity: 0
+      FadeMs: 3000
+      ParticleType: 
+      Rate: 0
+      Scale: 0
+      ThicknessFactor: 0
+      FromOrganId: 
+      ToOrganId: 
+      DurationMs: 0
+    NarrationFallback: Years of glomerular damage progress to chronic kidney disease.
+      Kidney function declines, protein leaks into the urine, and waste products
+      accumulate.
+    AiContext:
+      Physiology: diabetic nephropathy with declining GFR
+      ClinicalNote: Diabetes is the leading cause of end-stage renal disease worldwide.
+      Audience: 0
+  - StepIndex: 9
+    Stage: advanced
+    TargetOrganId: blood_vessels_coronary
+    MechanismKey: accelerated_atherosclerosis
+    Severity: 85
+    DelayMs: 27000
+    DurationMs: 3500
+    Effect:
+      Type: 5
+      Color: 
+      FromColor: 
+      ToColor: 
+      Intensity: 0
+      FadeMs: 0
+      ParticleType: 
+      Rate: 0
+      Scale: 0
+      ThicknessFactor: 1.6
+      FromOrganId: 
+      ToOrganId: 
+      DurationMs: 3500
+    NarrationFallback: Diabetes accelerates atherosclerosis throughout the body.
+      Coronary arteries narrow, dramatically increasing the risk of heart attack.
+    AiContext:
+      Physiology: diabetic macrovascular disease
+      ClinicalNote: Cardiovascular disease causes the majority of deaths in T2DM.
+      Audience: 0
+  - StepIndex: 10
+    Stage: advanced
+    TargetOrganId: eye_retina
+    MechanismKey: proliferative_retinopathy
+    Severity: 90
+    DelayMs: 30500
+    DurationMs: 3500
+    Effect:
+      Type: 2
+      Color: 
+      FromColor: 
+      ToColor: 
+      Intensity: 0
+      FadeMs: 0
+      ParticleType: inflammation
+      Rate: 40
+      Scale: 0
+      ThicknessFactor: 0
+      FromOrganId: 
+      ToOrganId: 
+      DurationMs: 0
+    NarrationFallback: Without intervention, fragile new blood vessels grow on the
+      retina and rupture. This is proliferative retinopathy and a leading cause of
+      preventable blindness.
+    AiContext:
+      Physiology: proliferative diabetic retinopathy
+      ClinicalNote: Treatable with laser photocoagulation if caught early.
+      Audience: 0
+  Metadata:
+    Sources:
+    - "StatPearls \u2014 Type 2 Diabetes (NCBI Bookshelf, 2023)"
+    - Swedish National Diabetes Register cohort study (Lancet Diabetes Endocrinol)
+    - ADA Standards of Care 2024
+    MedicalReviewedBy: 
+    MedicalReviewedDate: 
+    Version: 0.9-pre-review
+    TotalDurationMs: 34000
+    StepCount: 11

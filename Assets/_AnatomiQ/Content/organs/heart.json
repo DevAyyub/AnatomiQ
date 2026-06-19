@@ -1,0 +1,13 @@
+{
+  "organId": "heart",
+  "displayName": "Heart",
+  "nodeType": "anatomical",
+  "fmaId": "FMA7088",
+  "parentOrganId": null,
+  "system": "cardiovascular",
+  "meshId": "Body_Heart_LOD0",
+  "description": "Four-chambered muscular organ that pumps blood through the pulmonary and systemic circulations.",
+  "layer": "organs",
+  "anatomicalRegion": "chest_anterior",
+  "connections": []
+}

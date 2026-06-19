@@ -1,0 +1,18 @@
+{
+  "organId": "heart_left_ventricle",
+  "displayName": "Left Ventricle of Heart",
+  "nodeType": "anatomical",
+  "fmaId": "FMA7101",
+  "parentOrganId": "heart",
+  "system": "cardiovascular",
+  "meshId": "Body_Heart_LeftVentricle_LOD0",
+  "description": "The thickest-walled chamber of the heart, responsible for pumping oxygenated blood into systemic circulation against arterial pressure.",
+  "layer": "organs",
+  "anatomicalRegion": "chest_anterior",
+  "connections": [
+    { "toOrganId": "arteries_large", "type": "supplies_blood", "mechanism": "systolic_ejection",
+      "description": "Pumps blood into the aorta during systole" },
+    { "toOrganId": "blood_vessels_coronary", "type": "supplies_blood", "mechanism": "coronary_perfusion",
+      "description": "Receives its own blood supply via the coronary arteries" }
+  ]
+}

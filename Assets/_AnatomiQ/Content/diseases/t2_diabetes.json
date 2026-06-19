@@ -1,0 +1,271 @@
+{
+  "schemaVersion": 1,
+  "diseaseId": "t2_diabetes",
+  "displayName": "Type 2 Diabetes Mellitus",
+  "shortLabel": "Type 2 Diabetes",
+  "category": "metabolic",
+  "icd10": "E11",
+  "description": "A chronic metabolic disorder characterized by insulin resistance and progressive pancreatic beta cell dysfunction, leading to sustained hyperglycemia and progressive multi-organ complications affecting the cardiovascular, renal, ocular, and nervous systems.",
+  "entryOrganId": "pancreas_beta_cells",
+
+  "stages": [
+    {
+      "stageId": "early",
+      "label": "Early (0–5 years)",
+      "description": "Insulin resistance develops; pancreas compensates with hyperinsulinemia; blood glucose begins to rise.",
+      "stepIndices": [0, 1, 2, 3]
+    },
+    {
+      "stageId": "intermediate",
+      "label": "Intermediate (5–15 years)",
+      "description": "Beta cell function declines; sustained hyperglycemia damages microvasculature; early end-organ changes.",
+      "stepIndices": [4, 5, 6, 7]
+    },
+    {
+      "stageId": "advanced",
+      "label": "Advanced (15+ years)",
+      "description": "Established microvascular and macrovascular complications across multiple organ systems.",
+      "stepIndices": [8, 9, 10]
+    }
+  ],
+
+  "cascade": [
+    {
+      "stepIndex": 0,
+      "stage": "early",
+      "targetOrganId": "pancreas_beta_cells",
+      "mechanismKey": "beta_cell_hyperinsulinemia",
+      "severity": 25,
+      "delayMs": 0,
+      "durationMs": 3000,
+      "visualEffect": {
+        "type": "highlight_pulse",
+        "color": "#FFB800",
+        "intensity": 0.5
+      },
+      "narrationFallback": "Pancreatic beta cells become hypersensitive to glucose and begin secreting excess insulin to compensate for rising tissue insulin resistance.",
+      "aiContext": {
+        "physiology": "compensatory hyperinsulinemia",
+        "clinicalNote": "Asymptomatic phase, often missed without targeted screening.",
+        "audience": "general"
+      }
+    },
+    {
+      "stepIndex": 1,
+      "stage": "early",
+      "targetOrganId": "tissues_peripheral",
+      "mechanismKey": "insulin_resistance",
+      "severity": 35,
+      "delayMs": 2500,
+      "durationMs": 3000,
+      "visualEffect": {
+        "type": "color_change",
+        "fromColor": "#E8B5A8",
+        "toColor": "#D49888",
+        "fadeMs": 2500
+      },
+      "narrationFallback": "Muscle and fat tissues progressively lose sensitivity to insulin, requiring ever-higher insulin levels to maintain normal glucose uptake.",
+      "aiContext": {
+        "physiology": "peripheral insulin resistance",
+        "clinicalNote": "Linked to obesity, sedentary lifestyle, and genetic predisposition.",
+        "audience": "general"
+      }
+    },
+    {
+      "stepIndex": 2,
+      "stage": "early",
+      "targetOrganId": "blood_glucose_serum",
+      "mechanismKey": "hyperglycemia_onset",
+      "severity": 45,
+      "delayMs": 5000,
+      "durationMs": 3000,
+      "visualEffect": {
+        "type": "color_change",
+        "fromColor": "#C44545",
+        "toColor": "#E8A040",
+        "fadeMs": 2500
+      },
+      "narrationFallback": "Despite elevated insulin, blood glucose rises above the normal range as compensation begins to fail. This marks the clinical onset of diabetes.",
+      "aiContext": {
+        "physiology": "sustained hyperglycemia",
+        "clinicalNote": "HbA1c crosses 6.5% threshold for diagnosis.",
+        "audience": "general"
+      }
+    },
+    {
+      "stepIndex": 3,
+      "stage": "early",
+      "targetOrganId": "kidney_glomerulus",
+      "mechanismKey": "glomerular_hyperfiltration",
+      "severity": 30,
+      "delayMs": 8000,
+      "durationMs": 3000,
+      "visualEffect": {
+        "type": "highlight_pulse",
+        "color": "#FFA040",
+        "intensity": 0.5
+      },
+      "narrationFallback": "The kidneys initially respond to high blood glucose by increasing filtration rate, a phase known as glomerular hyperfiltration.",
+      "aiContext": {
+        "physiology": "early diabetic nephropathy hyperfiltration phase",
+        "clinicalNote": "Reversible if glycemic control achieved.",
+        "audience": "general"
+      }
+    },
+    {
+      "stepIndex": 4,
+      "stage": "intermediate",
+      "targetOrganId": "pancreas_beta_cells",
+      "mechanismKey": "beta_cell_exhaustion",
+      "severity": 65,
+      "delayMs": 11500,
+      "durationMs": 3000,
+      "visualEffect": {
+        "type": "shrink",
+        "scale": 0.88,
+        "durationMs": 2500
+      },
+      "narrationFallback": "Years of overwork drive beta cell exhaustion. Insulin output progressively declines, accelerating the rise in blood glucose.",
+      "aiContext": {
+        "physiology": "beta cell apoptosis and dysfunction",
+        "clinicalNote": "Many patients now require oral medications or insulin.",
+        "audience": "general"
+      }
+    },
+    {
+      "stepIndex": 5,
+      "stage": "intermediate",
+      "targetOrganId": "blood_vessels_systemic",
+      "mechanismKey": "microvascular_basement_thickening",
+      "severity": 55,
+      "delayMs": 14500,
+      "durationMs": 3000,
+      "visualEffect": {
+        "type": "thicken",
+        "thicknessFactor": 1.3,
+        "durationMs": 3000
+      },
+      "narrationFallback": "Sustained high glucose causes thickening of small blood vessel walls throughout the body, reducing oxygen delivery to tissues.",
+      "aiContext": {
+        "physiology": "advanced glycation end products and microvascular damage",
+        "clinicalNote": "The mechanism behind the major complications that follow.",
+        "audience": "general"
+      }
+    },
+    {
+      "stepIndex": 6,
+      "stage": "intermediate",
+      "targetOrganId": "eye_retina",
+      "mechanismKey": "diabetic_retinopathy_early",
+      "severity": 50,
+      "delayMs": 17500,
+      "durationMs": 3000,
+      "visualEffect": {
+        "type": "highlight_pulse",
+        "color": "#D44545",
+        "intensity": 0.7
+      },
+      "narrationFallback": "Damaged retinal capillaries begin to leak and form microaneurysms, the earliest visible sign of diabetic eye disease.",
+      "aiContext": {
+        "physiology": "non-proliferative diabetic retinopathy",
+        "clinicalNote": "Often asymptomatic until significant; annual eye exams critical.",
+        "audience": "general"
+      }
+    },
+    {
+      "stepIndex": 7,
+      "stage": "intermediate",
+      "targetOrganId": "nerves_peripheral_lower",
+      "mechanismKey": "diabetic_neuropathy_early",
+      "severity": 45,
+      "delayMs": 20500,
+      "durationMs": 3000,
+      "visualEffect": {
+        "type": "color_change",
+        "fromColor": "#FFE8C8",
+        "toColor": "#D49888",
+        "fadeMs": 2500
+      },
+      "narrationFallback": "Peripheral nerves, especially in the feet and legs, lose function due to vascular damage. Patients may notice tingling or reduced sensation.",
+      "aiContext": {
+        "physiology": "distal symmetric polyneuropathy",
+        "clinicalNote": "Increases risk of unnoticed foot injuries and ulcers.",
+        "audience": "general"
+      }
+    },
+    {
+      "stepIndex": 8,
+      "stage": "advanced",
+      "targetOrganId": "kidney_left",
+      "mechanismKey": "chronic_kidney_disease",
+      "severity": 80,
+      "delayMs": 23500,
+      "durationMs": 3500,
+      "visualEffect": {
+        "type": "color_change",
+        "fromColor": "#A85C45",
+        "toColor": "#6B3825",
+        "fadeMs": 3000
+      },
+      "narrationFallback": "Years of glomerular damage progress to chronic kidney disease. Kidney function declines, protein leaks into the urine, and waste products accumulate.",
+      "aiContext": {
+        "physiology": "diabetic nephropathy with declining GFR",
+        "clinicalNote": "Diabetes is the leading cause of end-stage renal disease worldwide.",
+        "audience": "general"
+      }
+    },
+    {
+      "stepIndex": 9,
+      "stage": "advanced",
+      "targetOrganId": "blood_vessels_coronary",
+      "mechanismKey": "accelerated_atherosclerosis",
+      "severity": 85,
+      "delayMs": 27000,
+      "durationMs": 3500,
+      "visualEffect": {
+        "type": "thicken",
+        "thicknessFactor": 1.6,
+        "durationMs": 3500
+      },
+      "narrationFallback": "Diabetes accelerates atherosclerosis throughout the body. Coronary arteries narrow, dramatically increasing the risk of heart attack.",
+      "aiContext": {
+        "physiology": "diabetic macrovascular disease",
+        "clinicalNote": "Cardiovascular disease causes the majority of deaths in T2DM.",
+        "audience": "general"
+      }
+    },
+    {
+      "stepIndex": 10,
+      "stage": "advanced",
+      "targetOrganId": "eye_retina",
+      "mechanismKey": "proliferative_retinopathy",
+      "severity": 90,
+      "delayMs": 30500,
+      "durationMs": 3500,
+      "visualEffect": {
+        "type": "particle_emit",
+        "particleType": "inflammation",
+        "rate": 40
+      },
+      "narrationFallback": "Without intervention, fragile new blood vessels grow on the retina and rupture. This is proliferative retinopathy and a leading cause of preventable blindness.",
+      "aiContext": {
+        "physiology": "proliferative diabetic retinopathy",
+        "clinicalNote": "Treatable with laser photocoagulation if caught early.",
+        "audience": "general"
+      }
+    }
+  ],
+
+  "metadata": {
+    "sources": [
+      "StatPearls — Type 2 Diabetes (NCBI Bookshelf, 2023)",
+      "Swedish National Diabetes Register cohort study (Lancet Diabetes Endocrinol)",
+      "ADA Standards of Care 2024"
+    ],
+    "medicalReviewedBy": null,
+    "medicalReviewedDate": null,
+    "version": "0.9-pre-review",
+    "totalDurationMs": 34000,
+    "stepCount": 11
+  }
+}

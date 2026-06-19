@@ -1,0 +1,18 @@
+{
+  "organId": "parathyroid_glands",
+  "displayName": "Parathyroid Glands",
+  "nodeType": "anatomical",
+  "fmaId": "FMA13885",
+  "parentOrganId": null,
+  "system": "endocrine",
+  "meshId": "Body_Parathyroid_LOD0",
+  "description": "Four small glands behind the thyroid that secrete parathyroid hormone (PTH), regulating calcium and phosphate homeostasis.",
+  "layer": "organs",
+  "anatomicalRegion": "neck",
+  "connections": [
+    { "toOrganId": "bone_skeletal_general", "type": "regulates", "mechanism": "pth_calcium_mobilization",
+      "description": "PTH mobilizes calcium from bone" },
+    { "toOrganId": "kidney_left", "type": "regulates", "mechanism": "pth_renal_action",
+      "description": "PTH increases renal calcium reabsorption and phosphate excretion" }
+  ]
+}

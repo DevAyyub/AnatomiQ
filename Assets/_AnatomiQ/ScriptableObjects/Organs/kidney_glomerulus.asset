@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a23c73c4d1dbd540b46ca7a38067d8c, type: 3}
+  m_Name: kidney_glomerulus
+  m_EditorClassIdentifier: AnatomiQ.Data::AnatomiQ.Data.OrganAsset
+  SchemaVersion: 1
+  OrganId: kidney_glomerulus
+  DisplayName: Renal Glomerulus
+  NodeType: 0
+  FmaId: FMA15624
+  ParentOrganId: kidney_left
+  System: 8
+  MeshId: Body_Kidney_Glomerulus_LOD0
+  Description: Tuft of capillaries within the kidney where blood filtration occurs.
+    Damage causes proteinuria and reduced filtration.
+  Layer: 5
+  Region: 4
+  Connections:
+  - ToOrganId: blood_vessels_systemic
+    Type: 8
+    Mechanism: glomerular_filtration
+    Description: Filters plasma to form primary urine
+  Metadata:
+    Sources: []
+    LastReviewed: 

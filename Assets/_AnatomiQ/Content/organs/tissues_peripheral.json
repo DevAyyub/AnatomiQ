@@ -1,0 +1,13 @@
+{
+  "organId": "tissues_peripheral",
+  "displayName": "Peripheral Tissues",
+  "nodeType": "anatomical",
+  "fmaId": null,
+  "parentOrganId": null,
+  "system": "muscular",
+  "meshId": "Body_Tissues_Peripheral_LOD0",
+  "description": "Aggregate term for muscle and fat tissue throughout the body. Primary site of insulin-mediated glucose uptake.",
+  "layer": "muscular",
+  "anatomicalRegion": "systemic",
+  "connections": []
+}

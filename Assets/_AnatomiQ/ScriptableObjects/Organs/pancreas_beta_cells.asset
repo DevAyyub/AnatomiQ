@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a23c73c4d1dbd540b46ca7a38067d8c, type: 3}
+  m_Name: pancreas_beta_cells
+  m_EditorClassIdentifier: AnatomiQ.Data::AnatomiQ.Data.OrganAsset
+  SchemaVersion: 1
+  OrganId: pancreas_beta_cells
+  DisplayName: Pancreatic Beta Cells
+  NodeType: 0
+  FmaId: FMA62630
+  ParentOrganId: pancreas
+  System: 5
+  MeshId: Body_Pancreas_BetaCells_LOD0
+  Description: Insulin-producing cells located in the islets of Langerhans within
+    the pancreas. Central to glucose homeostasis.
+  Layer: 5
+  Region: 4
+  Connections:
+  - ToOrganId: blood_glucose_serum
+    Type: 0
+    Mechanism: insulin_secretion
+    Description: Releases insulin in response to elevated blood glucose
+  - ToOrganId: liver
+    Type: 1
+    Mechanism: insulin_signaling
+    Description: Insulin signals liver to convert glucose to glycogen
+  - ToOrganId: tissues_peripheral
+    Type: 1
+    Mechanism: insulin_signaling
+    Description: Insulin enables glucose uptake by muscle and fat tissue
+  Metadata:
+    Sources:
+    - Gray's Anatomy 41st ed.
+    - FMA Ontology
+    LastReviewed: 

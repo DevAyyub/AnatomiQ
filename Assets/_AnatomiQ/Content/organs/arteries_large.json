@@ -1,0 +1,16 @@
+{
+  "organId": "arteries_large",
+  "displayName": "Large Arteries",
+  "nodeType": "anatomical",
+  "fmaId": "FMA50723",
+  "parentOrganId": null,
+  "system": "cardiovascular",
+  "meshId": "Body_Arteries_Large_LOD0",
+  "description": "Aorta and major branches; elastic conduits that distribute oxygenated blood from the heart to all body regions.",
+  "layer": "vascular",
+  "anatomicalRegion": "systemic",
+  "connections": [
+    { "toOrganId": "blood_vessels_systemic", "type": "supplies_blood", "mechanism": "arterial_pressure",
+      "description": "Distributes blood under pressure to smaller vessels throughout the body" }
+  ]
+}

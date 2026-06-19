@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a23c73c4d1dbd540b46ca7a38067d8c, type: 3}
+  m_Name: liver
+  m_EditorClassIdentifier: AnatomiQ.Data::AnatomiQ.Data.OrganAsset
+  SchemaVersion: 1
+  OrganId: liver
+  DisplayName: Liver
+  NodeType: 0
+  FmaId: FMA7197
+  ParentOrganId: 
+  System: 6
+  MeshId: Body_Liver_LOD0
+  Description: Largest internal organ, central to metabolism, glycogen storage, and
+    detoxification.
+  Layer: 5
+  Region: 4
+  Connections:
+  - ToOrganId: blood_glucose_serum
+    Type: 0
+    Mechanism: glycogen_storage
+    Description: Stores excess glucose as glycogen and releases it under glucagon
+      stimulation
+  Metadata:
+    Sources: []
+    LastReviewed: 

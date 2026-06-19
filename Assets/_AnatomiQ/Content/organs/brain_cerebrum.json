@@ -1,0 +1,16 @@
+{
+  "organId": "brain_cerebrum",
+  "displayName": "Cerebrum",
+  "nodeType": "anatomical",
+  "fmaId": "FMA62000",
+  "parentOrganId": "brain",
+  "system": "nervous",
+  "meshId": "Body_Brain_Cerebrum_LOD0",
+  "description": "Largest part of the brain, controlling higher functions including movement, sensation, language, and cognition. Highly dependent on cerebral perfusion.",
+  "layer": "nervous",
+  "anatomicalRegion": "head",
+  "connections": [
+    { "toOrganId": "blood_vessels_systemic", "type": "drains_blood", "mechanism": "cerebral_circulation",
+      "description": "Receives blood through cerebral arteries; vulnerable to hypertensive damage" }
+  ]
+}

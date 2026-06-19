@@ -1,0 +1,20 @@
+{
+  "organId": "kidney_left",
+  "displayName": "Left Kidney",
+  "nodeType": "anatomical",
+  "fmaId": "FMA7204",
+  "parentOrganId": null,
+  "system": "urinary",
+  "meshId": "Body_Kidney_Left_LOD0",
+  "description": "Bean-shaped retroperitoneal organ filtering blood and producing urine. Also produces erythropoietin and activates vitamin D.",
+  "layer": "organs",
+  "anatomicalRegion": "abdomen_upper",
+  "connections": [
+    { "toOrganId": "kidney_glomerulus", "type": "contains", "mechanism": "structural",
+      "description": "Glomeruli are the filtration units within the kidney" },
+    { "toOrganId": "blood_red_cells", "type": "regulates", "mechanism": "erythropoietin_secretion",
+      "description": "Secretes erythropoietin to stimulate red blood cell production" },
+    { "toOrganId": "bone_skeletal_general", "type": "regulates", "mechanism": "vitamin_d_activation",
+      "description": "Converts vitamin D to its active form for calcium absorption" }
+  ]
+}

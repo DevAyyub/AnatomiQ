@@ -1,0 +1,16 @@
+{
+  "organId": "pancreas",
+  "displayName": "Pancreas",
+  "nodeType": "anatomical",
+  "fmaId": "FMA7198",
+  "parentOrganId": null,
+  "system": "endocrine",
+  "meshId": "Body_Pancreas_LOD0",
+  "description": "Mixed exocrine-endocrine organ in the upper abdomen. Endocrine portion produces insulin and glucagon for glucose regulation.",
+  "layer": "organs",
+  "anatomicalRegion": "abdomen_upper",
+  "connections": [
+    { "toOrganId": "liver", "type": "produces", "mechanism": "digestive_enzymes",
+      "description": "Produces digestive enzymes secreted into the duodenum" }
+  ]
+}

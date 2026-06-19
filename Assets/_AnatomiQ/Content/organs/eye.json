@@ -1,0 +1,13 @@
+{
+  "organId": "eye",
+  "displayName": "Eye",
+  "nodeType": "anatomical",
+  "fmaId": "FMA54448",
+  "parentOrganId": null,
+  "system": "sensory",
+  "meshId": "Body_Eye_LOD0",
+  "description": "Organ of vision.",
+  "layer": "organs",
+  "anatomicalRegion": "head",
+  "connections": []
+}

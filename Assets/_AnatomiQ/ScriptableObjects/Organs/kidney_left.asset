@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a23c73c4d1dbd540b46ca7a38067d8c, type: 3}
+  m_Name: kidney_left
+  m_EditorClassIdentifier: AnatomiQ.Data::AnatomiQ.Data.OrganAsset
+  SchemaVersion: 1
+  OrganId: kidney_left
+  DisplayName: Left Kidney
+  NodeType: 0
+  FmaId: FMA7204
+  ParentOrganId: 
+  System: 8
+  MeshId: Body_Kidney_Left_LOD0
+  Description: Bean-shaped retroperitoneal organ filtering blood and producing urine.
+    Also produces erythropoietin and activates vitamin D.
+  Layer: 5
+  Region: 4
+  Connections:
+  - ToOrganId: kidney_glomerulus
+    Type: 9
+    Mechanism: structural
+    Description: Glomeruli are the filtration units within the kidney
+  - ToOrganId: blood_red_cells
+    Type: 0
+    Mechanism: erythropoietin_secretion
+    Description: Secretes erythropoietin to stimulate red blood cell production
+  - ToOrganId: bone_skeletal_general
+    Type: 0
+    Mechanism: vitamin_d_activation
+    Description: Converts vitamin D to its active form for calcium absorption
+  Metadata:
+    Sources: []
+    LastReviewed: 

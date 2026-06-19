@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a23c73c4d1dbd540b46ca7a38067d8c, type: 3}
+  m_Name: blood_glucose_serum
+  m_EditorClassIdentifier: AnatomiQ.Data::AnatomiQ.Data.OrganAsset
+  SchemaVersion: 1
+  OrganId: blood_glucose_serum
+  DisplayName: Blood Glucose Level
+  NodeType: 1
+  FmaId: 
+  ParentOrganId: 
+  System: 5
+  MeshId: 
+  Description: Circulating glucose concentration in the bloodstream. Sustained elevation
+    defines diabetes and drives microvascular complications.
+  Layer: 2
+  Region: 11
+  Connections:
+  - ToOrganId: kidney_glomerulus
+    Type: 8
+    Mechanism: renal_filtration
+    Description: Filtered by the kidneys; high levels exceed reabsorptive capacity
+  Metadata:
+    Sources: []
+    LastReviewed: 

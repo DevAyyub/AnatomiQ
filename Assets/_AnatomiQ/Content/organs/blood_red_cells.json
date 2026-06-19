@@ -1,0 +1,16 @@
+{
+  "organId": "blood_red_cells",
+  "displayName": "Red Blood Cells",
+  "nodeType": "anatomical",
+  "fmaId": "FMA62845",
+  "parentOrganId": null,
+  "system": "cardiovascular",
+  "meshId": "Body_Blood_RedCells_LOD0",
+  "description": "Oxygen-carrying cells produced in bone marrow under stimulation by erythropoietin. Reduced production causes anemia.",
+  "layer": "vascular",
+  "anatomicalRegion": "systemic",
+  "connections": [
+    { "toOrganId": "tissues_peripheral", "type": "supplies_blood", "mechanism": "oxygen_delivery",
+      "description": "Carry oxygen from lungs to tissues throughout the body" }
+  ]
+}

@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a23c73c4d1dbd540b46ca7a38067d8c, type: 3}
+  m_Name: heart_left_ventricle
+  m_EditorClassIdentifier: AnatomiQ.Data::AnatomiQ.Data.OrganAsset
+  SchemaVersion: 1
+  OrganId: heart_left_ventricle
+  DisplayName: Left Ventricle of Heart
+  NodeType: 0
+  FmaId: FMA7101
+  ParentOrganId: heart
+  System: 2
+  MeshId: Body_Heart_LeftVentricle_LOD0
+  Description: The thickest-walled chamber of the heart, responsible for pumping
+    oxygenated blood into systemic circulation against arterial pressure.
+  Layer: 5
+  Region: 2
+  Connections:
+  - ToOrganId: arteries_large
+    Type: 2
+    Mechanism: systolic_ejection
+    Description: Pumps blood into the aorta during systole
+  - ToOrganId: blood_vessels_coronary
+    Type: 2
+    Mechanism: coronary_perfusion
+    Description: Receives its own blood supply via the coronary arteries
+  Metadata:
+    Sources: []
+    LastReviewed: 

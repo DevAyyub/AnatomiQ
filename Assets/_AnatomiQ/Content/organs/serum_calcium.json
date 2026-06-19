@@ -1,0 +1,16 @@
+{
+  "organId": "serum_calcium",
+  "displayName": "Serum Calcium Level",
+  "nodeType": "physiological_state",
+  "fmaId": null,
+  "parentOrganId": null,
+  "system": "endocrine",
+  "meshId": null,
+  "description": "Circulating ionized calcium concentration. Tightly regulated by parathyroid hormone, calcitonin, and vitamin D.",
+  "layer": "vascular",
+  "anatomicalRegion": "systemic",
+  "connections": [
+    { "toOrganId": "parathyroid_glands", "type": "signals", "mechanism": "calcium_sensing",
+      "description": "Low calcium triggers parathyroid hormone release" }
+  ]
+}

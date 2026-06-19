@@ -1,0 +1,16 @@
+{
+  "organId": "eye_retina",
+  "displayName": "Retina",
+  "nodeType": "anatomical",
+  "fmaId": "FMA58301",
+  "parentOrganId": "eye",
+  "system": "sensory",
+  "meshId": "Body_Eye_Retina_LOD0",
+  "description": "Light-sensitive layer at the back of the eye. Densely vascularized; damage from systemic disease produces visible retinopathy.",
+  "layer": "nervous",
+  "anatomicalRegion": "head",
+  "connections": [
+    { "toOrganId": "blood_vessels_systemic", "type": "drains_blood", "mechanism": "retinal_circulation",
+      "description": "Supplied by retinal capillaries that mirror systemic vascular health" }
+  ]
+}
