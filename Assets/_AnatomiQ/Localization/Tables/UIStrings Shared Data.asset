@@ -19,6 +19,14 @@ MonoBehaviour:
     m_Key: ui.app.name
     m_Metadata:
       m_Items: []
+  - m_Id: 667670027976704
+    m_Key: ui.system.thermal.warning
+    m_Metadata:
+      m_Items: []
+  - m_Id: 667670057336832
+    m_Key: ui.system.thermal.critical
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

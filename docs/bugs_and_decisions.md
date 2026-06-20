@@ -13,8 +13,8 @@ Track each feature here. Only mark ✅ when tested on physical device (Poco X5 P
 
 | Feature ID | Name | Status | Date |
 |---|---|---|---|
-| CORE-007 | Fallback & State Manager | 🧪 Shell built (scaffold), not device-tested | 2026-06-18 |
-| CORE-008 | Data Layer & ScriptableObjects | 🧪 Schemas built (scaffold), not device-tested | 2026-06-18 |
+| CORE-007 | Fallback & State Manager | 🧪 Logic phase built — connectivity + framerate + thermal live; AR/API/inference documented stubs; two-axis (AppState + PerformanceTier) contract; thermal localization strings authored; 14 PlayMode + 5 EditMode green; not device-tested | 2026-06-20 |
+| CORE-008 | Data Layer & ScriptableObjects | 🧪 Built — service + importer + §9 validator + Phase 1 content (32 EditMode + 5 PlayMode green); not device-tested | 2026-06-19 |
 | CORE-001 | AR Session Manager | ⬜ Not started | — |
 | CORE-002 | 3D Body Model Renderer | ⬜ Not started | — |
 | CORE-003 | Layer Toggle System | ⬜ Not started | — |
@@ -398,6 +398,123 @@ Track each feature here. Only mark ✅ when tested on physical device (Poco X5 P
 **Outcome:** Clears the recurring *"Android App Info has not been configured"* warning.
 **Confirmed rule (Build Env C.5):** cascade `narrationFallback` stays in JSON, NOT in localization tables — keeps medically-validated content editable by reviewers without re-review risk. `DiseaseContent` holds disease names/descriptions/stage labels, not cascade narrations.
 
+---
+
+### [EXECUTION — CORE-008] BodySystem enum renamed Vascular → Cardiovascular
+
+**Decision:** Renamed `BodySystem.Vascular` → `BodySystem.Cardiovascular` (member only; ordinal/position unchanged).
+**Why:** The carried-forward `metabolic` concern was a red herring — no authored node uses `system: "metabolic"` (blood glucose / serum calcium are `endocrine`). The real mismatch was `system: "cardiovascular"` on 7 nodes (heart, left ventricle, large arteries, systemic + coronary vessels, red cells, blood pressure), which had no matching enum member. Renaming makes the JSON↔enum mapping 1:1 (snake_case strategy: `cardiovascular` → `Cardiovascular`), matches the medically-correct term (the heart is not a "vessel"), and cleanly separates the *system* axis from `AnatomyLayer.Vascular` (the *layer* axis — e.g. `blood_vessels_systemic` is system=Cardiovascular, layer=Vascular).
+**Safe:** No content asset or test referenced `BodySystem.Vascular` (confirmed against `DataSchemaTests`). `DiseaseCategory.Cardiovascular` already existed — the asymmetry is now gone.
+**Follow-up:** Data Schemas §2.3 should change its `vascular` entry to `cardiovascular` to stay in sync (doc is read-only project knowledge; not edited from this chat).
+**Resolves:** the deferred "physiological_state system vs BodySystem enum" item.
+
+---
+
+### [EXECUTION — CORE-008] JSON↔C# field bridges + importer approach
+
+**Decision:** Three `[JsonProperty]` attributes bridge the doc's JSON keys to the C# field names that don't match them: `anatomicalRegion`→`Region`, `icd10`→`Icd10Code`, `visualEffect`→`Effect`. (The design docs' own C# disagrees with their own JSON on exactly these three.)
+**Importer:** `ContentImporter` (Data assembly, pure logic) uses Newtonsoft `JsonConvert.Populate` into a `ScriptableObject.CreateInstance` (you can't `new` a ScriptableObject), with `StringEnumConverter(new SnakeCaseNamingStrategy())` so snake_case enum values (`highlight_pulse`, `supplies_blood`, `physiological_state`) map to PascalCase members. Everything else matches case-insensitively, so only the three bridges were needed. Accepts a bare object or an `{ "organs": [...] }` / `{ "diseases": [...] }` envelope. A malformed item is reported via out-param and skipped, never thrown.
+
+---
+
+### [EXECUTION — CORE-008] Drop-the-edge refined; uniqueness split
+
+**Decision:** When a connection's `toOrganId` (or a `parentOrganId`) doesn't resolve, the DataLayer logs a warning and leaves the edge INERT — it does NOT remove it from the asset. Consumers resolve targets via `TryGetOrgan`, which returns false for a missing node, so a dangling edge can't break traversal.
+**Why not mutate:** mutating a ScriptableObject asset in Play Mode persists the change back to the project (a known Unity gotcha). Logging + inert edge achieves the same "organ stays usable" outcome without touching content.
+**Uniqueness split:** disease-id uniqueness is a §9 rule enforced in `ContentValidator` (via an existing-ids set); organ-id uniqueness is enforced at DataLayer dictionary-build time (first wins, duplicate logged + skipped).
+
+---
+
+### [EXECUTION — CORE-008] Content load source = build-time import → .asset + manifest
+
+**Decision:** Runtime never parses JSON. An Editor tool (`AnatomiQ → Content → Import JSON`) reads `Content/{organs,diseases}/*.json`, validates, writes one `.asset` per item to `ScriptableObjects/{Organs,Diseases}/`, and rebuilds a `ContentManifest` SO. The `DataLayer` (`[SerializeField] ContentManifest`) loads from the manifest.
+**Defense in depth:** the DataLayer RE-validates every item at load (not only at import), so a deleted asset or a hand-edited inspector value degrades gracefully (log + skip) instead of crashing — this is what actually delivers the CORE-008 fallback rule.
+**GUID stability:** existing `.asset`s are updated via `EditorUtility.CopySerialized` (not delete-and-recreate), so manifest/scene references survive re-imports.
+**Alternative considered:** ship raw JSON in StreamingAssets and parse at launch (simpler, no Editor tool, but no inspector visibility + a startup parse cost) — rejected.
+
+---
+
+### [EXECUTION — CORE-008] Editor tool isolated in its own nested asmdef
+
+**Decision:** The import tool lives in `Scripts/Editor/Content/` under its own `AnatomiQ.Editor.Content` asmdef (references `AnatomiQ.Data`, Editor-only), NOT at the `Scripts/Editor/` root.
+**Why:** `Scripts/Editor/` already hosts the migrations assembly (`Migrations/`). A second asmdef at the Editor root would risk a name collision or silently absorb `Migrations` into the new assembly. A nested asmdef governs only its own subtree, so this is safe regardless of how the existing Editor assembly is configured.
+
+---
+
+### [EXECUTION — CORE-007] Two-axis state model: AppState + PerformanceTier
+
+**Decision:** CORE-007 now publishes TWO orthogonal signals, not one. Axis 1 = `AppState` (AR/connectivity context: AR_ACTIVE / AR_VIEWER_MODE / AR_LIMITED / OFFLINE_MODE) via the existing `OnAppStateChanged`. Axis 2 = a NEW `PerformanceTier` enum (Nominal → Reduced → Aggressive → Critical, ascending severity) via a new `OnPerformanceTierChanged` event on `IFallbackManager`, plus `CurrentTier` and a read-only `PerformanceMetrics` snapshot.
+**Why:** Low FPS and thermal throttling are *quality reductions* (render scale, LOD, shadow distance, post-processing, inference frequency), not AR/connectivity modes. They don't map onto any AppState — `SetState(AR_ACTIVE)` can't express "drop render scale to 0.85". Overloading AppState (e.g. an `AR_ACTIVE_DEGRADED` member) would combinatorially explode the enum and force every AppState subscriber to care about render quality. A device can legitimately be AR_ACTIVE + Critical (tracking fine but hot) or OFFLINE_MODE + Nominal (no network, cool) — proof the axes are independent.
+**Contract:** `PerformanceTier` is *severity*, not concrete levers. CORE-007 decides how bad it is; CORE-002's renderer (the pending consumer) translates tier → URP levers per Performance doc A.10/A.11. This keeps CORE-007 free of any rendering dependency and keeps the assembly DAG clean (Core never references the AR/Anatomy pillars).
+**Alternatives considered:** a single combined signal, or CORE-007 emitting raw "set render scale 0.75" events — both rejected (false coupling; CORE-007 reaching into URP internals it doesn't own).
+**Trade-off accepted:** two subscription surfaces to keep coherent. Justified because they're genuinely orthogonal.
+
+---
+
+### [EXECUTION — CORE-007] Fire the tier signal now, with no consumer yet
+
+**Decision:** `OnPerformanceTierChanged` is published in the logic phase even though no system subscribes yet (CORE-002 subscribes when the renderer lands).
+**Why:** The tier transitions are real and tested; absence of a consumer doesn't make the signal wrong. Mirrors how `OnAppStateChanged` already existed with no subscribers. The FPS/thermal *sources* exist now, so the only thing pending is the *consumer* — flagged as a carry-forward, not faked.
+
+---
+
+### [EXECUTION — CORE-007] Signal-check sources: which are live vs documented stubs
+
+**Decision:** Of the six monitoring checks, three are implemented now (their sources exist): `CheckConnectivity`, `CheckFramerate`, `CheckThermal`. Three stay documented stubs with TODOs tied to their feature: `CheckArTracking` (needs CORE-001), `CheckApiAvailability` (needs CORE-006), `CheckInferenceState` (needs on-device inference). The monitoring-loop coroutine from the scaffold was NOT rebuilt — only the checks it already invokes were filled.
+**Tested:** an "inert stubs" PlayMode test holds connectivity reachable + thermal cool + FPS good, then asserts no state/tier change across 5 passes — proving the unimplemented checks cause no transitions.
+
+---
+
+### [EXECUTION — CORE-007] Per-frame FPS collection, 1-second evaluation
+
+**Decision:** FPS is collected EVERY frame in `Update()` into a 30-frame ring buffer (O(1) running sum, allocation-free); the 1-second `MonitorPass` only *evaluates* the smoothed average. Connectivity and thermal stay on the 1s tick.
+**Why:** A 1 Hz sampler can't compute a meaningful 30-frame rolling average (at 30 fps that's ~1 s of frames sampled once per second). The split — per-frame collection, 1 s evaluation — is the fix. Confirmed the 1 s cadence is correct for connectivity/thermal (both slow-moving; thermal changes over minutes) but wrong for FPS.
+**Hysteresis:** demote when rolling FPS < 30 sustained 3 s; promote only when > 40 sustained 5 s. Separate enter/exit thresholds (30/40 dead-band) + longer recovery dwell prevent flapping at the boundary. Stepwise — one tier level per qualifying interval, never a jump. A dip interrupted before 3 s resets the sustain timer.
+**Scope note:** the global 30 fps floor (from the Fallback Rules) is used now; scenario-specific minimums (45/30/20 from Performance A.54) are settable later by CORE-002/ATLAS-006 per scenario.
+
+---
+
+### [EXECUTION — CORE-007] Thermal API is Adaptive Performance (now CORE in Unity 6.3), not Application.thermalState
+
+**Decision/Finding:** There is NO `Application.thermalState` in Unity 6.3. The correct OS-backed thermal signal comes through **Adaptive Performance**, which in Unity 6.3 was **moved from a package into the engine core** (release note: "Moved Adaptive Performance 6 from a package to the Unity core. Bundled provider packages with the Unity Editor"). API surface (stable across AP 1.x–5.x, web-verified): `Holder.Instance.ThermalStatus.ThermalMetrics.WarningLevel` (`NoWarning` / `ThrottlingImminent` / `Throttling`) + `.TemperatureLevel` (0–1), guarded by `Holder.Instance.Active`. Requires the **Android (Google) provider subsystem** installed + enabled, or `ap.Active` is false and there's no data. Provides no data in the editor or PlayMode (device-only).
+**Mapping (matches Unity's own AP LOD example):** `NoWarning`→Nominal; `ThrottlingImminent` ≤0.8→Reduced (Moderate); `ThrottlingImminent` >0.8→Aggressive (Severe); `Throttling`→Critical.
+**Decoupling:** a Core-local `ThermalWarning` enum mirrors AP's `WarningLevel`, so the signal logic and its tests run package-free; only the deferred adapter references the AP namespace.
+
+---
+
+### [EXECUTION — CORE-007] Asymmetric thermal hysteresis (heat fast, cool slow)
+
+**Decision:** Heating applies IMMEDIATELY (jump straight to the hotter tier); cooling is gated by a 3-pass dwell and steps DOWN one level at a time.
+**Why:** Shedding load late risks the OS throttling/killing the app, so respond to heat at once (safety-first). But a momentary cool reading must not snap quality back up mid-cascade, so cooling is sustained + stepwise. A re-heat during cooldown jumps straight back to the hot tier and resets the cooldown streak.
+
+---
+
+### [EXECUTION — CORE-007] Cross-axis reconciliation: published tier = max(FPS, thermal)
+
+**Decision:** FPS and thermal each produce an independent sub-tier (`_fpsTier`, `_thermalTier`); the published `CurrentTier` is `(PerformanceTier)Math.Max((int)fps, (int)thermal)` via `ReconcileTier()`.
+**Why:** Whichever axis is worse should win — a hot device at good FPS still degrades; a cool device at bad FPS still degrades. This is why `PerformanceTier` members are ordered by ascending severity (do not reorder — `max` depends on it). Tested both single-axis directions and the both-active case.
+
+---
+
+### [EXECUTION — CORE-007] Thermal user strings: keys in code, values in UIStrings, display deferred
+
+**Decision:** Two Localization keys are defined as public constants on `FallbackManager` — `ui.system.thermal.warning` (THERMAL_WARNING_STRING_KEY, shown at Aggressive) and `ui.system.thermal.critical` (THERMAL_CRITICAL_STRING_KEY, shown at Critical). Their English values were authored into the `UIStrings` table by a one-shot Editor tool (`AnatomiQ ▸ Localization ▸ Add CORE-007 Thermal Strings`, in `Scripts/Editor/Localization/ThermalStringsInstaller.cs`). CORE-007 does NOT display them.
+**Why:** CORE-007 owns *signals*, not presentation. A UI layer (CORE-002/UI) subscribes to `OnPerformanceTierChanged` and shows the matching localized string at the relevant tier. Wiring display now would couple CORE-007 to a UI contract that doesn't exist yet — same reasoning as the deferred debug overlay. Keys are owned by code (constants); values live in the table; display is a deferred consumer. Strings go through Unity Localization per the day-1 rule (the cascade-narration JSON exception does not apply).
+**Tooling note:** the installer lives in an `Editor/`-convention folder with NO asmdef — verified that `Scripts/Editor/` has no root asmdef (only the nested `AnatomiQ.Editor.Content` one), so Unity compiles the tool into the predefined `Assembly-CSharp-Editor` assembly, which already references the Localization editor API. Used the documented `GetStringTableCollection` → `GetTable("en")` → `AddEntry(key, value)` path; idempotent (skips existing keys).
+
+---
+
+### [EXECUTION — CORE-007] Debug overlay: sampling now, on-screen widget deferred
+
+**Decision:** The A.12 performance overlay is split. The *sampling* + the read-only `PerformanceMetrics` snapshot (rolling FPS, tier, temperature level, RAM placeholder) ship now as the data contract. The on-screen overlay *widget* is deferred to CORE-002 (it needs renderer-reported GPU/drawcall/triangle stats and a UI host). Note the CORE-007 *feature spec* does not itself mention an overlay; A.12 in the Performance doc does — resolved by building the signal half now, the UI half later.
+
+---
+
+### [EXECUTION — CORE-007] Testability via provider seams + InternalsVisibleTo
+
+**Decision:** Each live signal reads through a swappable interface — `IConnectivityProvider` (real: `UnityConnectivityProvider`), `IFrameClock` (real: `UnityFrameClock`), `IThermalProvider` (real: deferred `AdaptivePerformanceThermalProvider`, default: `NullThermalProvider`). Production defaults are the real Unity-backed impls; PlayMode tests inject fakes via `internal` `Configure*` hooks exposed through `[assembly: InternalsVisibleTo("AnatomiQ.Tests.PlayMode")]` (new `AssemblyInfo.cs` in Core). A `TickForTest()` runs one monitor pass synchronously, bypassing the 1 s coroutine.
+**Why:** static Unity APIs (`Application.internetReachability`, `Time.unscaledDeltaTime`, Adaptive Performance) can't be driven in a unit test. The seams make all threshold/hysteresis/reconciliation logic deterministically testable off-device. Matches the testing standard: mock the hard-to-test source, test the consuming logic. `InternalsVisibleTo` target verified against the PlayMode asmdef name (`AnatomiQ.Tests.PlayMode`).
+
 ## Bugs & Fixes
 
 *Log every significant bug here — what it was, what caused it, how it was fixed. Format: Feature → Symptom → Cause → Fix.*
@@ -469,6 +586,34 @@ Track each feature here. Only mark ✅ when tested on physical device (Poco X5 P
 
 ---
 
+### [2026-06-19] — CORE-008 — PlayMode test won't compile: `LogAssert` not found (CS0103)
+
+**Symptom:** `DataLayerTests.cs` → `CS0103: The name 'LogAssert' does not exist in the current context`, blocking the PlayMode test assembly compile (caught at import, before any test ran).
+**Cause:** `LogAssert` lives in `UnityEngine.TestTools`, which wasn't imported. (NUnit's `Assert` is `NUnit.Framework`, but `LogAssert` is Unity's, in a different namespace.)
+**Fix:** Added `using UnityEngine.TestTools;`. No asmdef change — the test-framework reference was already present.
+**Prevention:** Any PlayMode test that asserts on expected `Debug.LogError`/`LogWarning` via `LogAssert.Expect` needs `using UnityEngine.TestTools;`.
+
+---
+
+### [2026-06-20] — CORE-007 — Real thermal provider + Adaptive Performance enablement  ⚠️ DEFERRED → CORE-001
+
+**Symptom:** None at runtime — by design. `CheckThermal` reads through `IThermalProvider`, which defaults to `NullThermalProvider` (`IsAvailable=false`), so the thermal tier never moves off Nominal in the editor/PlayMode.
+**Cause:** Adaptive Performance returns no data without the Android (Google) provider subsystem installed + enabled, and that subsystem only functions on a physical device. Wiring it now would add Project-Settings/subsystem churn to a pure-logic chat and still be unverifiable until device.
+**Status:** DEFERRED to CORE-001 (Decision B). The seam, the WarningLevel/TemperatureLevel→tier mapping, the hysteresis, and all tests landed in the logic phase. Only the concrete adapter + settings defer. The concrete `AdaptivePerformanceThermalProvider` is already written in the repo but compiled OUT behind `#if ANATOMIQ_ADAPTIVE_PERFORMANCE`.
+**Planned fix (CORE-001 device pass, alongside the ARCore Gradle work):** (1) install the AP Android/Google provider (bundled with Unity 6.3); (2) enable it in Project Settings ▸ Adaptive Performance ▸ Android; (3) add `ANATOMIQ_ADAPTIVE_PERFORMANCE` to Android scripting define symbols; (4) configure `FallbackManager` to use `AdaptivePerformanceThermalProvider` instead of `NullThermalProvider`; (5) verify on the Poco X5 Pro against a real throttling scenario (sustained AR + cascade load).
+**Prevention:** none needed — this is a planned staged rollout, not a defect.
+
+---
+
+### [2026-06-20] — CORE-007 — Extending IFallbackManager broke an unseen implementer (Safe Mode)
+
+**Symptom:** After adding `CurrentTier` / `OnPerformanceTierChanged` / `Metrics` to `IFallbackManager`, Unity opened in Safe Mode with three CS0535 errors: `ServiceRegistryTests.MockFallbackManager does not implement interface member 'IFallbackManager.CurrentTier' / '.Metrics' / '.OnPerformanceTierChanged'`.
+**Cause:** the EditMode `ServiceRegistryTests.cs` defines its own `MockFallbackManager : IFallbackManager`. Extending the interface broke that implementer. It was missed because the off-Unity compile-check used a different fake and never compiled the real `ServiceRegistryTests.cs`.
+**Fix:** added the three members to `MockFallbackManager` (minimal stubs: `CurrentTier` auto-prop, a `FireTier` helper so the event is used, `Metrics` returning a snapshot). Cleared Safe Mode; all 5 EditMode + 14 PlayMode green.
+**Prevention:** (1) Before changing any shared interface, enumerate ALL implementers first (here: `FallbackManager` + the test mock). (2) Compile EVERY real file together — including all test assemblies — before declaring a step done, not just the files touched.
+
+---
+
 ## Performance Notes
 
 *Log any performance discoveries, optimizations made, or device-specific behavior observed on the Poco X5 Pro.*
@@ -511,6 +656,8 @@ Track each feature here. Only mark ✅ when tested on physical device (Poco X5 P
 **— "Build failed" ≠ "code broken."** Distinguish compile errors (block editor + Play Mode, must fix now) from release-packaging failures (Gradle/manifest, only block the APK). The latter can be deferred without blocking editor-verifiable work — but only after the cause is *verified* from the generated artifacts, not inferred.
 
 **— Verify package/setting state from the generated artifact, not from assumption.** The ARCore namespace cause was only pinned down by reading the generated manifests under `Library/Bee/...`. When a build/setting issue is ambiguous, inspect what Unity actually generated before deciding a fix.
+
+**— Check the actual authored data, not the flagged assumption.** The carried-forward "physiological_state uses `metabolic`" concern was false on contact with the real JSON (those nodes are `endocrine`); the genuine problem was `cardiovascular` on 7 nodes — found only by auditing every enum string in the content against the enum members. A flagged item is a hypothesis: verify it against the data before "fixing" it, and the same audit usually surfaces the real issue. (Pairs with "verify from the generated artifact.")
 
 ---
 
@@ -556,7 +703,10 @@ Track each feature here. Only mark ✅ when tested on physical device (Poco X5 P
 | Localization beyond English | Externalize strings from day 1, but ship English only | Post-academic |
 | Final logo, app icon, full visual identity | Iterate against real screens | Mid-Phase 3 or commission later |
 | ARCore release-APK Gradle namespace fix (`:arcore_client:` vs `:unityandroidpermissions:`) | Needs a real AR scene to verify the gradleTemplate fix against | CORE-001 (first AR feature) |
-| `physiological_state` node `system` value vs `BodySystem` enum (no `Metabolic` member) | Schema/importer concern; no importer or medical content loaded yet | CORE-008 (Data Layer) |
+| Content + test-fixture JSON packing into player builds as TextAssets | Runtime loads `.asset`s via the manifest, not JSON; harmless few-KB until then | When build packaging is wired (exclude `Content/` + `Tests/.../Fixtures/` from the build) |
+| CORE-007 thermal provider enablement (`AdaptivePerformanceThermalProvider` + AP Android subsystem + `ANATOMIQ_ADAPTIVE_PERFORMANCE` define) | AP only returns data on a physical device; adapter already written but compiled out | CORE-001 device pass (alongside the ARCore Gradle fix) |
+| CORE-007 `OnPerformanceTierChanged` consumer: translate tier → URP levers + show thermal strings + build the A.12 overlay widget | No renderer/UI host exists yet; CORE-007 publishes the signal + the `PerformanceMetrics` contract now | CORE-002 (3D Body Model Renderer) / UI |
+| CORE-007 signal stubs `CheckArTracking` / `CheckApiAvailability` / `CheckInferenceState` | Their sources don't exist yet; left as documented stubs | CORE-001 / CORE-006 / on-device inference respectively |
 
 ---
 
@@ -583,8 +733,14 @@ Track each feature here. Only mark ✅ when tested on physical device (Poco X5 P
 | Schema v2 migration path | ✅ RESOLVED | Migration script policy specified |
 | Package versions at scaffold time | ✅ RESOLVED | AR 6.3.4 pair, Inference 2.5.0, Newtonsoft 3.2.2, Localization 1.5.12, Input 1.19.0; locked via packages-lock.json |
 | ARCore release-APK manifest-merge failure | 🟡 DEFERRED → CORE-001 | Custom Main Gradle Template; verified cause = Unity's own module namespace clash under Gradle 9.1.0 |
-| physiological_state `system` vs BodySystem enum | 🟡 DEFERRED → CORE-008 | Reconcile when JSON importer + medical content land |
+| physiological_state `system` vs BodySystem enum | ✅ RESOLVED | `metabolic` was a red herring; renamed `BodySystem.Vascular`→`Cardiovascular` (7 nodes). Update Data Schemas §2.3 to match |
+| CORE-008 runtime content load mechanism | ✅ RESOLVED | Build-time Editor import → `.asset` + `ContentManifest`; DataLayer re-validates at load |
+| CORE-007 degradation-vs-AppState model | ✅ RESOLVED | Two orthogonal axes: `AppState` (AR/connectivity) + new `PerformanceTier` (quality). Published separately; `CurrentTier` = max(fps, thermal) |
+| CORE-007 thermal API on Unity 6.3 | ✅ RESOLVED | Adaptive Performance (now CORE in 6.3), NOT `Application.thermalState`. Mapping via `WarningLevel`+`TemperatureLevel`. Concrete provider deferred → CORE-001 |
+| CORE-007 monitoring cadence | ✅ RESOLVED | 1s for connectivity/thermal; per-frame collection + 1s evaluation for FPS (a 1Hz sampler can't compute a rolling average) |
 
 ---
 
-*Last updated: Unity scaffold chat (Steps 1–8) DONE — project compiles, all gates passed (EditMode 5 tests + PlayMode 1 test green; Section 3 clean APK), committed + pushed. Two items deferred forward: ARCore release-APK Gradle fix → CORE-001; physiological_state/BodySystem enum → CORE-008. Ready for first feature chat (suggested: CORE-001, or CORE-008 for AR-independent progress).*
+*Last updated: CORE-007 (Fallback & State Manager) LOGIC PHASE DONE — two-axis model (`AppState` + new `PerformanceTier`); live signals `CheckConnectivity` (debounced → OFFLINE_MODE), `CheckFramerate` (per-frame ring buffer, 1s eval, 30/40 hysteresis), `CheckThermal` (Adaptive Performance mapping, asymmetric heat-fast/cool-slow hysteresis); `max(fps,thermal)` reconciliation; provider seams (`IConnectivityProvider`/`IFrameClock`/`IThermalProvider`) + `InternalsVisibleTo` for tests; thermal localization keys (code) + values (UIStrings via Editor tool); 14 PlayMode + 5 EditMode green; committed + pushed. AR/API/inference checks left as documented stubs. Deferred to CORE-001: real thermal provider enablement (`AdaptivePerformanceThermalProvider` + AP Android subsystem + define). Deferred to CORE-002: tier→URP-lever consumer, thermal-string display, A.12 overlay widget, RAM metric. Next: CORE-001 (AR Session Manager) — also fixes the deferred ARCore release-APK Gradle namespace clash and enables the thermal provider on device.*
+
+*Prior — CORE-008 (Data Layer) DONE — JSON→SO importer + §9 `ContentValidator` + `DataLayer` service (self-registers, re-validates on load) + Editor import tool + Phase 1 content (24 organs, 3 cascades) all green (32 EditMode + 5 PlayMode); committed + pushed. Resolved the physiological_state/BodySystem enum item (→ Cardiovascular). Open: medical review of the 3 cascades (Phase 2 checkpoint), content-JSON build packing.*

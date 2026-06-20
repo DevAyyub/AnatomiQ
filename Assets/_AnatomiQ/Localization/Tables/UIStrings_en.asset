@@ -22,6 +22,16 @@ MonoBehaviour:
     m_Localized: AnatomiQ
     m_Metadata:
       m_Items: []
+  - m_Id: 667670027976704
+    m_Localized: Your device is getting warm, so some visual detail has been reduced
+      to keep things running smoothly.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 667670057336832
+    m_Localized: "Your device is hot. AnatomiQ is briefly easing off to let it cool
+      down \u2014 this will pass in a moment."
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

@@ -14,9 +14,20 @@ namespace AnatomiQ.Tests.EditMode
     {
         private sealed class MockFallbackManager : IFallbackManager
         {
+            // Axis 1: AR / connectivity
             public AppState CurrentState { get; set; } = AppState.AR_VIEWER_MODE;
             public event Action<AppState> OnAppStateChanged;
             public void Fire(AppState state) => OnAppStateChanged?.Invoke(state);
+
+            // Axis 2: quality / degradation (added with the CORE-007 two-axis logic phase).
+            // This mock only needs to satisfy the contract for registration tests, so the tier
+            // members are minimal stubs with a Fire helper mirroring the AppState one.
+            public PerformanceTier CurrentTier { get; set; } = PerformanceTier.Nominal;
+            public event Action<PerformanceTier> OnPerformanceTierChanged;
+            public void FireTier(PerformanceTier tier) => OnPerformanceTierChanged?.Invoke(tier);
+
+            public PerformanceMetrics Metrics =>
+                new PerformanceMetrics(0f, CurrentTier, -1f, -1f);
         }
 
         private ServiceRegistry _registry;

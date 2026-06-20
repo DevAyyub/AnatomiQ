@@ -13,7 +13,9 @@ namespace AnatomiQ.Core
         /// <summary>AR unavailable/declined; 3D-only viewer experience is active.</summary>
         AR_VIEWER_MODE,
 
-        /// <summary>AR running but degraded (tracking lost, thermal/perf throttle, etc.).</summary>
+        /// <summary>AR running but tracking is degraded/lost (owned by CORE-001). NOTE: thermal/perf
+        /// throttling does NOT map here — that is the orthogonal <see cref="PerformanceTier"/> axis
+        /// (CORE-007 two-axis decision). This state is for AR tracking degradation only.</summary>
         AR_LIMITED,
 
         /// <summary>No network; cached responses and pre-baked data only.</summary>
