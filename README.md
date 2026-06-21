@@ -6,8 +6,6 @@ AnatomiQ is an AI-powered Augmented Reality mobile app that makes the human body
 
 This is an academic personal project (with potential future startup direction), built in Unity for Android.
 
-> **Status:** Pre-scaffold. This repository currently contains version-control scaffolding and planning documents only. No Unity project has been created yet.
-
 ---
 
 ## What makes it different
