@@ -5,11 +5,18 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/SampleScene.unity
     guid: 99c9720ab356a0642a771bea13969a05
+  - enabled: 1
+    path: Assets/_AnatomiQ/Scenes/AR_Main.unity
+    guid: 9c4fd1c3a3b58e34aa10e37c9279b155
   m_configObjects:
     UnityEditor.XR.ARCore.ARCoreSettings: {fileID: 11400000, guid: 9b29e89e9878efd40b3cd03fc2455888, type: 2}
+    com.unity.adaptivePerformance.basic.provider_settings: {fileID: 11400000, guid: 0f790720d35345049ba1ad9fccc00eb6, type: 2}
+    com.unity.adaptiveperformance.google.android.provider_settings: {fileID: 11400000, guid: bb435e5dce7ba024e91c38d24037fa25, type: 2}
+    com.unity.adaptiveperformance.loader_settings: {fileID: 11400000, guid: 3c504fb5199c2c04cb6eddf758d62c04, type: 2}
+    com.unity.adaptiveperformance.simulator.provider_settings: {fileID: 11400000, guid: a3f873b767c4c49478a69a76c26e1474, type: 2}
     com.unity.addressableassets: {fileID: 11400000, guid: da31d1f7cbf09984eb499e6568aae4b4, type: 2}
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}

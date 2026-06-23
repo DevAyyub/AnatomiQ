@@ -13,9 +13,9 @@ Track each feature here. Only mark ✅ when tested on physical device (Poco X5 P
 
 | Feature ID | Name | Status | Date |
 |---|---|---|---|
-| CORE-007 | Fallback & State Manager | 🧪 Logic phase built — connectivity + framerate + thermal live; AR/API/inference documented stubs; two-axis (AppState + PerformanceTier) contract; thermal localization strings authored; 14 PlayMode + 5 EditMode green; not device-tested | 2026-06-20 |
+| CORE-007 | Fallback & State Manager | ✅ Device-verified via CORE-001 — thermal provider live on Poco (ADPF, `Temp` real not −1); FPS calibration fixed (threshold = fraction of target; device caps AR at 30fps); connectivity moved to its own axis (OFFLINE_MODE removed from AppState); `CheckArTracking` now live (pulls `IArTrackingProvider`); API/inference still documented stubs; 20 PlayMode + 5 EditMode green | 2026-06-23 |
 | CORE-008 | Data Layer & ScriptableObjects | 🧪 Built — service + importer + §9 validator + Phase 1 content (32 EditMode + 5 PlayMode green); not device-tested | 2026-06-19 |
-| CORE-001 | AR Session Manager | ⬜ Not started | — |
+| CORE-001 | AR Session Manager | ✅ Device-verified on Poco — session→tracking→`AppState` promotion (`AR_VIEWER_MODE`→`AR_ACTIVE`), camera passthrough rendering, `IArTrackingProvider` pull into CORE-007; camera/launcher/Gradle/AP all resolved on device; 61 tests green (37 EditMode + 24 PlayMode) | 2026-06-23 |
 | CORE-002 | 3D Body Model Renderer | ⬜ Not started | — |
 | CORE-003 | Layer Toggle System | ⬜ Not started | — |
 | CORE-004 | Organ Selection & Highlight | ⬜ Not started | — |
@@ -515,30 +515,130 @@ Track each feature here. Only mark ✅ when tested on physical device (Poco X5 P
 **Decision:** Each live signal reads through a swappable interface — `IConnectivityProvider` (real: `UnityConnectivityProvider`), `IFrameClock` (real: `UnityFrameClock`), `IThermalProvider` (real: deferred `AdaptivePerformanceThermalProvider`, default: `NullThermalProvider`). Production defaults are the real Unity-backed impls; PlayMode tests inject fakes via `internal` `Configure*` hooks exposed through `[assembly: InternalsVisibleTo("AnatomiQ.Tests.PlayMode")]` (new `AssemblyInfo.cs` in Core). A `TickForTest()` runs one monitor pass synchronously, bypassing the 1 s coroutine.
 **Why:** static Unity APIs (`Application.internetReachability`, `Time.unscaledDeltaTime`, Adaptive Performance) can't be driven in a unit test. The seams make all threshold/hysteresis/reconciliation logic deterministically testable off-device. Matches the testing standard: mock the hard-to-test source, test the consuming logic. `InternalsVisibleTo` target verified against the PlayMode asmdef name (`AnatomiQ.Tests.PlayMode`).
 
+---
+
+### [EXECUTION — CORE-001] AR scene composition: XR Origin (Mobile AR) + single AppCore host
+
+**Decision:** `AR_Main.unity` built from GameObject ▸ XR ▸ **XR Origin (Mobile AR)** (brings ARSession + XR Origin + AR Camera with ARCameraManager/ARCameraBackground/TrackedPoseDriver). A single **AppCore** GameObject hosts `FallbackManager` + `AppBootstrap` + `ARSessionManager`, all wired to the same `ServiceRegistry`. The stray top-level Main Camera is deleted (the XR Origin owns the camera); XR Origin Camera Y Offset set to 0.
+**Reason:** One service host keeps registration order deterministic (`AppBootstrap` at -500, `ARSessionManager` at -900) and matches the ServiceRegistry pattern. Editor "No active XR subsystem" warnings are expected (no AR in editor).
+**Alternatives considered:** Separate hosts per service (rejected — ordering fragility, more wiring).
+
+---
+
+### [EXECUTION — CORE-001] ARSessionManager implements IArTrackingProvider — pull, not push
+
+**Decision:** `ARSessionManager` (MonoBehaviour, `[DefaultExecutionOrder(-900)]`) implements `IArTrackingProvider : IService` and self-registers with the ServiceRegistry. CORE-007's `FallbackManager.CheckArTracking` **pulls** `Status` each ~1s tick; tracking changes also broadcast via a change-only `OnTrackingStateChanged` event.
+**Reason:** Keeps the dependency one-directional (Core never references AR); CORE-007 stays the single writer of `AppState`. `ArTrackingStatus` {Unavailable, PermissionDenied, Initializing, Tracking, Limited, NotTracking} maps → AppState: Tracking→`AR_ACTIVE`; Limited/NotTracking→`AR_LIMITED`; else→`AR_VIEWER_MODE`.
+**Device-verified:** session→`Tracking`→`AR_ACTIVE` promotion fires once, on hardware.
+
+---
+
+### [EXECUTION — CORE-001] Connectivity moved to its own axis (CORE-007 contract change)
+
+**Decision:** Removed `OFFLINE_MODE` from `AppState`; added a separate `Connectivity` enum {Online, Offline} with `CurrentConnectivity` + `OnConnectivityChanged` on `IFallbackManager`. `AppState` is now AR-context-only {AR_ACTIVE, AR_VIEWER_MODE, AR_LIMITED} with a single writer (`CheckArTracking`).
+**Reason:** AR-active and offline are orthogonal; folding them into one enum caused an "AR-active-while-offline" flap. Two axes eliminate it. (Supersedes the CORE-007 `CheckConnectivity → OFFLINE_MODE` note in the footer.)
+**Alternatives considered:** Keep OFFLINE_MODE in AppState (rejected — flap, ambiguous single-writer).
+
+---
+
+### [EXECUTION — CORE-001] FPS tier thresholds are fractions of target; AR target = 30 on this device
+
+**Decision:** `FallbackManager` exposes a serialized `_targetFrameRate` (set via `Application.targetFrameRate` in Awake) and derives the FPS demote/promote thresholds as **fractions of it** (0.75 / 0.87), not absolute numbers. On the Poco, AR target is **30**, not 60.
+**Reason (device-measured):** ARCore drives the AR render at the 30fps camera stream on this device — AP reports `Bottleneck TargetFrameRate` with GPU ~3.6ms / CPU ~5ms frametimes (huge headroom), proving 30 is a deliberate cap, not a perf wall. Fractional thresholds mean a 30-capped device targeting 30 reads as on-target (29.9 > 22.5), so the tier holds Nominal. The old bug: demote threshold sat *at* the cap (both 30) → permanent false-degrade to Critical.
+**Alternatives considered:** Target 60 (tested, rejected — unreachable in AR session here); absolute thresholds (rejected — the original bug).
+
+---
+
+### [EXECUTION — CORE-001] Forked/embedded com.unity.xr.arcore to fix Gradle namespace clash
+
+**Decision:** Embedded the `com.unity.xr.arcore` package (copied from `Library/PackageCache` into `Packages/`) and patched `Runtime/Android/unityandroidpermissions.aar`'s manifest `package` from the legacy `com.google.ar.core` → `com.unity.arcore.permissions`.
+**Reason:** AGP 9 / Gradle 9.1.0 enforce namespace uniqueness; Unity's own `unityandroidpermissions.aar` carries a legacy `package="com.google.ar.core"` that collides with `:arcore_client:`. This is the only edit that resolved the release-APK manifest merge.
+**Trade-off (must remember):** the ARCore package is now forked/embedded — **re-apply the AAR edit on any ARCore package update.** An earlier `allprojects{afterEvaluate}` gradle-hook attempt failed (these are jetified AARs, not Gradle modules).
+
+---
+
+### [EXECUTION — CORE-001] GameActivity launcher + AppCompat theme in custom manifest
+
+**Decision:** `Assets/Plugins/Android/AndroidManifest.xml` explicitly declares the launcher activity `com.unity3d.player.UnityPlayerGameActivity` (MAIN/LAUNCHER intent-filter + `unityplayer.UnityActivity=true`), with `android:theme="@style/BaseUnityGameActivityTheme"`. Application Entry Point = **GameActivity**.
+**Reason:** Without the explicit activity the APK installed with no launcher icon ("No activity with MAIN/LAUNCHER"); GameActivity then requires an AppCompat-derived theme (`UnityThemeSelector` crashes with "You need to use a Theme.AppCompat theme").
+**Note:** Keep this manifest to launcher + permissions only — never re-add ARCore meta-data/feature (the plug-in owns those).
+
 ## Bugs & Fixes
 
 *Log every significant bug here — what it was, what caused it, how it was fixed. Format: Feature → Symptom → Cause → Fix.*
 
 ---
 
-<!-- EXAMPLE FORMAT — delete this when you add your first real entry:
-
-### [DATE] — CORE-001 — AR session not starting on device
-
-**Symptom:** AR camera feed black on Poco X5 Pro, session never initializes.
-**Cause:** ARCore set to Optional instead of Required in XR Plug-in Management settings. Device defaulted to non-AR mode.
-**Fix:** Set ARCore Requirement to Required in Edit → Project Settings → XR Plug-in Management → ARCore.
-**Prevention:** Always verify ARCore is set to Required after any fresh project setup.
-
--->
-
-### [2026-06-18] — Scaffold/Build — Release APK fails: ARCore namespace used in multiple modules  ⚠️ DEFERRED → CORE-001
+### [2026-06-18→23] — Scaffold/Build → CORE-001 — Release APK fails: ARCore namespace used in multiple modules  ✅ RESOLVED
 
 **Symptom:** `File → Build` (release APK) fails at `:launcher:processReleaseMainManifest` — *"Manifest merger failed with multiple errors."* Full error: *"Namespace 'com.google.ar.core' is used in multiple modules and/or libraries: :arcore_client:, :unityandroidpermissions:."*
 **Cause (VERIFIED, not inferred):** Two of Unity's OWN bundled AAR modules (`:arcore_client:` and `:unityandroidpermissions:`) declare the same Gradle namespace. AGP under Unity 6.3.17 + Gradle 9.1.0 now enforces namespace uniqueness across modules; older AGP tolerated it. Confirmed by inspecting the generated manifests in `Library/Bee/Android/Prj/IL2CPP/Gradle/...` — our own `Assets/Plugins/Android/AndroidManifest.xml` is clean (camera+internet only) and merges fine; the clash is entirely between Unity's modules.
-**Status:** DEFERRED to CORE-001 (the first feature that needs a real AR scene on device). NOT blocking: Editor + Play Mode unaffected, and Section 3 already proved the IL2CPP/ARM64/Vulkan release pipeline builds a clean APK (before ARCore was enabled). Sections 5–8 are all editor/Play-Mode verifiable.
-**Planned fix:** Custom Main Gradle Template in Player Settings (Publishing Settings) to resolve the module namespace collision (assign a unique namespace / suppress the uniqueness check). Test against a live AR scene at CORE-001 so the fix is verified with real AR code, not an empty scene.
-**Prevention:** When CORE-001 starts, expect to touch `gradleTemplate`/AGP config. Don't re-add ARCore entries to the custom manifest — that's a *different* failure (see below).
+**Fix (VERIFIED on device, CORE-001):** The planned gradleTemplate route did **not** work — the colliding modules are jetified AAR libraries, not Gradle modules, so an `allprojects{afterEvaluate}` namespace hook had no effect. Real root cause: Unity's own `Packages/com.unity.xr.arcore/Runtime/Android/unityandroidpermissions.aar` ships a legacy manifest `package="com.google.ar.core"` (2014-era, no namespace), from which AGP 9 derives a namespace colliding with `:arcore_client:`. Resolved by **embedding** `com.unity.xr.arcore` (copy `Library/PackageCache` → `Packages/`) and patching the AAR manifest `package` → `com.unity.arcore.permissions` (7-Zip in-place). Build then succeeds. Removed the dead allprojects hook.
+**Trade-off:** ARCore package is now forked/embedded — re-apply the AAR edit on any ARCore update. (See matching decision entry.)
+**Prevention:** Don't re-add ARCore entries to the custom manifest — that's a *different* failure (see below). When updating ARCore, expect to redo the AAR patch.
+
+---
+
+### [2026-06-23] — CORE-001 — URP AR camera renders a solid color; camera passthrough missing (tracking works)
+
+**Symptom:** On device the screen showed a solid clear color (black/yellow depending on clear), even though tracking reached `Tracking` and `AppState` promoted to `AR_ACTIVE`. Persisted under both Vulkan and GLES3, with `ARCameraManager` + `ARCameraBackground` present and the correct `Mobile_RPAsset`/`Mobile_Renderer` active.
+**Cause:** The URP renderer was missing the **AR Background Renderer Feature** — the pass that actually *draws* the camera image. We had only added the **AR Command Buffer Support Renderer Feature** earlier, which enables Vulkan AR command-buffer support but is **not** the background-draw pass. With no draw pass, you see the camera's clear color. (Graphics API was irrelevant — confirmed by GLES3 test also failing.)
+**Fix:** `Mobile_Renderer` ▸ Renderer Features ▸ Add Renderer Feature ▸ **AR Background Renderer Feature** (keep both AR features). Camera feed renders immediately once tracking is up. Reverted Graphics APIs to Vulkan-first.
+**Prevention:** A URP AR renderer needs BOTH features; the command-buffer feature alone is insufficient. Solid-color screen + working tracking = missing AR Background Renderer Feature.
+
+---
+
+### [2026-06-23] — CORE-001 — APK installs but no launcher icon ("No activity with MAIN/LAUNCHER")
+
+**Symptom:** App installed via Build And Run but had no home-screen icon and couldn't be launched; logcat noted no MAIN/LAUNCHER activity.
+**Cause:** The custom `AndroidManifest.xml` had an empty `<application tools:node="merge"/>` and didn't declare a launcher activity; with GameActivity entry point, nothing wired MAIN/LAUNCHER.
+**Fix:** Declared `com.unity3d.player.UnityPlayerGameActivity` explicitly with a MAIN/LAUNCHER intent-filter + `meta-data unityplayer.UnityActivity=true`.
+**Prevention:** With GameActivity, the custom manifest must declare the launcher activity explicitly.
+
+---
+
+### [2026-06-23] — CORE-001 — Launch crash: "You need to use a Theme.AppCompat theme"
+
+**Symptom:** After adding the launcher activity, the app crashed on launch with `IllegalStateException: You need to use a Theme.AppCompat theme (or descendant) with this activity`.
+**Cause:** `UnityPlayerGameActivity` (GameActivity) requires an AppCompat-derived theme; the activity was set to `@style/UnityThemeSelector`.
+**Fix:** Changed the activity `android:theme` to **`@style/BaseUnityGameActivityTheme`**.
+**Prevention:** GameActivity ⇒ AppCompat theme (`BaseUnityGameActivityTheme`), not `UnityThemeSelector`.
+
+---
+
+### [2026-06-23] — CORE-001 — Install blocked: INSTALL_FAILED_USER_RESTRICTED (MIUI)
+
+**Symptom:** `adb`/Build And Run install failed with `INSTALL_FAILED_USER_RESTRICTED`.
+**Cause:** MIUI (Xiaomi/Poco) ships with "Install via USB" disabled in Developer Options.
+**Fix:** Enable Developer Options ▸ **Install via USB** on the device.
+**Prevention:** Poco device-setup checklist item — enable Install via USB once per device.
+
+---
+
+### [2026-06-23] — CORE-007/CORE-001 — FPS tier false-degrades Nominal→Critical and sticks
+
+**Symptom:** On device the `PerformanceTier` walked Nominal→Reduced→Aggressive→Critical within ~10s and stuck, at a steady `FPS=29.9`, with thermal inert.
+**Cause:** `FPS_DEMOTE_THRESHOLD` was a hard `30f` while the device's real frame rate is capped at ~30 (ARCore camera). The rolling average sat a hair under (29.9 < 30) every tick → permanent demote; the 40f promote threshold was never reachable → never recovered. A threshold sitting *at* the cap.
+**Fix:** Thresholds are now **fractions of `_targetFrameRate`** (0.75 demote / 0.87 promote), set in `FallbackManager.Awake`; AR target set to **30** for this device. At target 30 the demote threshold is 22.5, so 29.9 reads as on-target → tier holds Nominal (device-verified, ~35s steady). One dead-band PlayMode test re-primed 35→48 accordingly.
+**Prevention:** A demote threshold must always sit meaningfully below the *reachable* cap, never at it. Tie tier thresholds to the target frame rate, and make the target an explicit, reachable value.
+
+---
+
+### [2026-06-23] — CORE-007/CORE-001 — Adaptive Performance: "Initialization of Provider was not successful"; thermal stuck at −1
+
+**Symptom:** Logcat: `[Adaptive Performance] Initialization of Provider was not successful... select your loader`; `Temp=-1.00` in every snapshot. "Indexer Active" was already checked.
+**Cause:** Two separate toggles. "Initialize Adaptive Performance on Startup" was on, but **no provider was selected** in Project Settings ▸ Adaptive Performance ▸ Providers — so the loader started with nothing to load. Indexer-active ≠ provider-selected.
+**Fix:** Tick **Android Provider** (generic ADPF) in the Providers list. Leave Samsung (deprecated, Samsung-only) and Basic (stub) off. On next run: `Subsystem version=34.0.0`, ADPF thermal events flow, `Temp=0.00` (real reading; a cool idle device reads 0 thermal-used, not a failure).
+**Prevention:** AP needs BOTH "Initialize on Startup" AND a provider checked. On non-Samsung devices use Android Provider (ADPF, API 29+).
+
+---
+
+### [2026-06-23] — CORE-001 — ARSessionManager: obsolete PermissionDeniedAndDontAskAgain (CS0618)
+
+**Symptom:** Warning compiling `ARSessionManager` subscribing to `PermissionCallbacks.PermissionDeniedAndDontAskAgain`.
+**Cause:** That callback is deprecated in AR Foundation 6.3.
+**Fix:** Removed the subscription; permission-denied is handled via the standard denied path → `PermissionDenied` status → `AR_VIEWER_MODE`.
+**Prevention:** On AF 6.x use the current PermissionCallbacks surface; don't subscribe to the deprecated event.
 
 ---
 
@@ -595,13 +695,14 @@ Track each feature here. Only mark ✅ when tested on physical device (Poco X5 P
 
 ---
 
-### [2026-06-20] — CORE-007 — Real thermal provider + Adaptive Performance enablement  ⚠️ DEFERRED → CORE-001
+### [2026-06-20→23] — CORE-007 — Real thermal provider + Adaptive Performance enablement  ✅ RESOLVED (CORE-001 device pass)
 
 **Symptom:** None at runtime — by design. `CheckThermal` reads through `IThermalProvider`, which defaults to `NullThermalProvider` (`IsAvailable=false`), so the thermal tier never moves off Nominal in the editor/PlayMode.
 **Cause:** Adaptive Performance returns no data without the Android (Google) provider subsystem installed + enabled, and that subsystem only functions on a physical device. Wiring it now would add Project-Settings/subsystem churn to a pure-logic chat and still be unverifiable until device.
 **Status:** DEFERRED to CORE-001 (Decision B). The seam, the WarningLevel/TemperatureLevel→tier mapping, the hysteresis, and all tests landed in the logic phase. Only the concrete adapter + settings defer. The concrete `AdaptivePerformanceThermalProvider` is already written in the repo but compiled OUT behind `#if ANATOMIQ_ADAPTIVE_PERFORMANCE`.
-**Planned fix (CORE-001 device pass, alongside the ARCore Gradle work):** (1) install the AP Android/Google provider (bundled with Unity 6.3); (2) enable it in Project Settings ▸ Adaptive Performance ▸ Android; (3) add `ANATOMIQ_ADAPTIVE_PERFORMANCE` to Android scripting define symbols; (4) configure `FallbackManager` to use `AdaptivePerformanceThermalProvider` instead of `NullThermalProvider`; (5) verify on the Poco X5 Pro against a real throttling scenario (sustained AR + cascade load).
-**Prevention:** none needed — this is a planned staged rollout, not a defect.
+**Fix (DONE on device):** (1) installed AP + AP Android 6.0.0; (2) `ANATOMIQ_ADAPTIVE_PERFORMANCE` added to Android defines; (3) `AdaptivePerformanceThermalProvider` active behind the define; (4) **the non-obvious step** — selecting the **Android Provider** in Project Settings ▸ Adaptive Performance ▸ Providers (Indexer-active and "Initialize on Startup" alone are NOT enough; see the dedicated bug entry). Result on Poco: ADPF subsystem v34.0.0 initialized, thermal events flow, `Temp` reads real (0.00 on a cool device, `NoWarning`) instead of −1.
+**Still to verify later:** behavior under a real throttling scenario (sustained AR + cascade load) — deferred to when there's actual GPU load (CORE-002+); the wiring itself is confirmed live.
+**Prevention:** AP needs a provider *selected*, not just installed + indexer-on.
 
 ---
 
@@ -625,7 +726,13 @@ Track each feature here. Only mark ✅ when tested on physical device (Poco X5 P
 - Inference Engine shader note: *`Shader warning in 'Hidden/Sentis/SliceSet': signed/unsigned mismatch`* — package-internal (`com.unity.ai.inference`), cosmetic.
 - Test Framework writes `Assets/Resources/PerformanceTestRunInfo.json` + `PerformanceTestRunSettings.json` on build — junk, git-ignored (see `.gitignore`).
 
-*(Real device performance notes will start at CORE-002 / on-device testing.)*
+**[2026-06-23 · CORE-001 · Poco X5 Pro] First real on-device AR measurements (empty AR scene + camera passthrough):**
+- **AR render is capped at ~29.93 fps by ARCore** (the camera stream). AP reports `Bottleneck TargetFrameRate`. `Application.targetFrameRate = 60` does NOT lift it in an AR session — the cap is upstream. So the AR frame-rate target for this device is **30**.
+- Massive headroom under that cap: **GPU frametime ~3.1–3.9 ms, CPU ~5 ms** against a 33 ms budget on an empty scene. Plenty of room for CORE-002 geometry + CORE-005 cascade animation before 30 fps is at risk.
+- Thermal idle baseline: `SkinTemp=0`, `thermal level=0.00`, `NoWarning`, `ThermalTrend 0` — device cool and untaxed; confirms the thermal axis is reading real data, not throttling.
+- `Cluster Info = Big/Medium/Little 0/0/0` and `CPU=-1/-1 GPU=-1/-1` performance levels — ADPF on this device doesn't expose per-cluster core counts or boost levels; only thermal + bottleneck + frametimes are populated. Don't rely on cluster/boost fields on the Poco.
+
+*(Loaded-scene performance notes continue at CORE-002 / on-device testing.)*
 
 ---
 
@@ -635,7 +742,11 @@ Track each feature here. Only mark ✅ when tested on physical device (Poco X5 P
 
 ---
 
-*No dependency discoveries yet.*
+**[2026-06-23 · CORE-001 ↔ CORE-007] ARCore's 30 fps camera cap drives the CORE-007 FPS tier.** The AR camera stream rate (ARCore) sets the whole app's frame rate in an AR session, which is what the CORE-007 framerate tier measures. The two features are coupled through the frame rate: CORE-007's thresholds must be set against the rate ARCore actually delivers (30 here), not Unity's `targetFrameRate` request. Any future change to the AR camera config (e.g. a 60 fps mode on better hardware) must be reflected in `_targetFrameRate`.
+
+**[2026-06-23 · CORE-001 ↔ CORE-007] CORE-007's thermal axis only goes live once an AR/AP-configured build runs on device.** The thermal provider (`AdaptivePerformanceThermalProvider`) needs the AP Android provider selected + the define set + a physical device — all of which first happened during the CORE-001 device pass. Before that, the thermal tier silently stayed Nominal (`NullThermalProvider`). Anyone testing CORE-007 thermal behavior must do it in a device build, not the editor.
+
+**[2026-06-23 · CORE-001] URP renderer features are an ordered set the AR camera depends on implicitly.** `ARCameraBackground` does nothing visible unless the active renderer carries the **AR Background Renderer Feature**. The dependency isn't expressed in the component — it's a separate asset (the renderer) that must be configured, and it's easy to have the components right and the renderer wrong.
 
 ---
 
@@ -658,6 +769,16 @@ Track each feature here. Only mark ✅ when tested on physical device (Poco X5 P
 **— Verify package/setting state from the generated artifact, not from assumption.** The ARCore namespace cause was only pinned down by reading the generated manifests under `Library/Bee/...`. When a build/setting issue is ambiguous, inspect what Unity actually generated before deciding a fix.
 
 **— Check the actual authored data, not the flagged assumption.** The carried-forward "physiological_state uses `metabolic`" concern was false on contact with the real JSON (those nodes are `endocrine`); the genuine problem was `cardiovascular` on 7 nodes — found only by auditing every enum string in the content against the enum members. A flagged item is a hypothesis: verify it against the data before "fixing" it, and the same audit usually surfaces the real issue. (Pairs with "verify from the generated artifact.")
+
+**— A threshold must never sit at the cap it's measuring against.** The FPS tier false-degraded forever because the demote threshold (30) equalled the device's real frame cap (30), so the rolling average (29.9) was always "below." Any threshold compared against a capped/clamped signal has to sit meaningfully below the cap — and better, be expressed *relative* to the cap/target so it can't drift into equality. (Generalizes beyond FPS: any "below X = bad" check where X can also be the ceiling.)
+
+**— Test the unreachable setting to learn the real ceiling.** Asking for 60 fps and watching the device still pin at 30 (with frametimes proving idle headroom) is what proved ARCore hard-caps AR render at 30 — you can't infer a cap from a value that's already at it. When a limit is suspected, deliberately request *past* it once; the gap between request and result is the answer. Read AP's `Bottleneck` field and GPU/CPU frametimes, not just the fps number.
+
+**— "Enabled/installed" ≠ "selected/active": watch for two-toggle features.** Adaptive Performance failed to init because a provider wasn't *selected*, even though the package was installed, the Indexer was active, and "Initialize on Startup" was on. Several Unity subsystems gate behind two independent switches (install/enable + select-for-platform). When something "should be on" but reports not-initialized, look for the second toggle before assuming a deeper fault. (Same shape as XR Plug-in Management: package installed vs provider checked per platform.)
+
+**— Solid-color screen + working logic = a missing *render pass*, not a missing component.** Tracking worked, components were present, pipeline was correct — but the camera didn't draw because the renderer lacked the AR Background feature. When the system's data/logic is provably running but nothing shows, suspect the render pipeline configuration (renderer features, active asset) before re-checking components. Confirm which renderer/asset is *actually active* on the platform, not just which one you edited.
+
+**— Diagnose by ruling causes out with cheap tests before changing code.** The Vulkan→GLES3 swap (one build) cleanly eliminated the graphics-API theory; the target-60 build cleanly proved the 30 cap; the GLES3 + screenshot of the renderer dropdown pinned the real fix. Each was a single deliberate build that *removed* a hypothesis. Cheaper than speculative code edits, and it kept the search honest — including catching my own wrong calls (the gradleTemplate route, the command-buffer feature) by testing rather than assuming.
 
 ---
 
@@ -702,11 +823,11 @@ Track each feature here. Only mark ✅ when tested on physical device (Poco X5 P
 | Symptom pattern schema | Phase 3 dependency, premature now | Start of Phase 3 (PRISM-001) |
 | Localization beyond English | Externalize strings from day 1, but ship English only | Post-academic |
 | Final logo, app icon, full visual identity | Iterate against real screens | Mid-Phase 3 or commission later |
-| ARCore release-APK Gradle namespace fix (`:arcore_client:` vs `:unityandroidpermissions:`) | Needs a real AR scene to verify the gradleTemplate fix against | CORE-001 (first AR feature) |
 | Content + test-fixture JSON packing into player builds as TextAssets | Runtime loads `.asset`s via the manifest, not JSON; harmless few-KB until then | When build packaging is wired (exclude `Content/` + `Tests/.../Fixtures/` from the build) |
-| CORE-007 thermal provider enablement (`AdaptivePerformanceThermalProvider` + AP Android subsystem + `ANATOMIQ_ADAPTIVE_PERFORMANCE` define) | AP only returns data on a physical device; adapter already written but compiled out | CORE-001 device pass (alongside the ARCore Gradle fix) |
 | CORE-007 `OnPerformanceTierChanged` consumer: translate tier → URP levers + show thermal strings + build the A.12 overlay widget | No renderer/UI host exists yet; CORE-007 publishes the signal + the `PerformanceMetrics` contract now | CORE-002 (3D Body Model Renderer) / UI |
-| CORE-007 signal stubs `CheckArTracking` / `CheckApiAvailability` / `CheckInferenceState` | Their sources don't exist yet; left as documented stubs | CORE-001 / CORE-006 / on-device inference respectively |
+| CORE-007 signal stubs `CheckApiAvailability` / `CheckInferenceState` | Their sources don't exist yet; left as documented stubs (`CheckArTracking` now LIVE via CORE-001's `IArTrackingProvider`) | CORE-006 / on-device inference respectively |
+| CORE-007 thermal behavior under real throttling load (sustained AR + cascade) | Provider now live on device, but device stays cool on an empty scene — needs real GPU load to exercise demotion | CORE-002+ (once geometry/animation load exists) |
+| Remove temporary `ARStatusLogger` device probe | Used for CORE-001 device verification; delete the script + the AppCore component | Immediately, now CORE-001 is verified |
 
 ---
 
@@ -732,15 +853,21 @@ Track each feature here. Only mark ✅ when tested on physical device (Poco X5 P
 | ATLAS-006 ONNX model sourcing | 🟢 INTENTIONALLY DEFERRED | Research at start of ATLAS-006 chat (state changes) |
 | Schema v2 migration path | ✅ RESOLVED | Migration script policy specified |
 | Package versions at scaffold time | ✅ RESOLVED | AR 6.3.4 pair, Inference 2.5.0, Newtonsoft 3.2.2, Localization 1.5.12, Input 1.19.0; locked via packages-lock.json |
-| ARCore release-APK manifest-merge failure | 🟡 DEFERRED → CORE-001 | Custom Main Gradle Template; verified cause = Unity's own module namespace clash under Gradle 9.1.0 |
+| ARCore release-APK manifest-merge failure | ✅ RESOLVED (CORE-001) | Embedded `com.unity.xr.arcore` + patched `unityandroidpermissions.aar` package→`com.unity.arcore.permissions`. gradleTemplate route was wrong (jetified AARs, not modules). Forked package — re-patch on ARCore update |
 | physiological_state `system` vs BodySystem enum | ✅ RESOLVED | `metabolic` was a red herring; renamed `BodySystem.Vascular`→`Cardiovascular` (7 nodes). Update Data Schemas §2.3 to match |
 | CORE-008 runtime content load mechanism | ✅ RESOLVED | Build-time Editor import → `.asset` + `ContentManifest`; DataLayer re-validates at load |
 | CORE-007 degradation-vs-AppState model | ✅ RESOLVED | Two orthogonal axes: `AppState` (AR/connectivity) + new `PerformanceTier` (quality). Published separately; `CurrentTier` = max(fps, thermal) |
 | CORE-007 thermal API on Unity 6.3 | ✅ RESOLVED | Adaptive Performance (now CORE in 6.3), NOT `Application.thermalState`. Mapping via `WarningLevel`+`TemperatureLevel`. Concrete provider deferred → CORE-001 |
 | CORE-007 monitoring cadence | ✅ RESOLVED | 1s for connectivity/thermal; per-frame collection + 1s evaluation for FPS (a 1Hz sampler can't compute a rolling average) |
+| AR frame-rate target on Poco (30 vs 60) | ✅ RESOLVED (CORE-001) | 30 — ARCore caps AR render at the camera's 30fps stream; `targetFrameRate=60` doesn't lift it. FPS tier thresholds now fractions of target |
+| URP AR camera passthrough setup | ✅ RESOLVED (CORE-001) | Active renderer needs BOTH AR Background Renderer Feature (draw pass) AND AR Command Buffer Support feature; background feature was the missing piece |
+| Adaptive Performance provider on non-Samsung device | ✅ RESOLVED (CORE-001) | Android Provider (ADPF) selected in Providers list; works on Poco (API 34). Samsung provider is Samsung-only; Basic is a stub |
+| Android entry point / launcher activity / theme | ✅ RESOLVED (CORE-001) | GameActivity entry point; custom manifest declares `UnityPlayerGameActivity` MAIN/LAUNCHER with `@style/BaseUnityGameActivityTheme` (AppCompat) |
 
 ---
 
-*Last updated: CORE-007 (Fallback & State Manager) LOGIC PHASE DONE — two-axis model (`AppState` + new `PerformanceTier`); live signals `CheckConnectivity` (debounced → OFFLINE_MODE), `CheckFramerate` (per-frame ring buffer, 1s eval, 30/40 hysteresis), `CheckThermal` (Adaptive Performance mapping, asymmetric heat-fast/cool-slow hysteresis); `max(fps,thermal)` reconciliation; provider seams (`IConnectivityProvider`/`IFrameClock`/`IThermalProvider`) + `InternalsVisibleTo` for tests; thermal localization keys (code) + values (UIStrings via Editor tool); 14 PlayMode + 5 EditMode green; committed + pushed. AR/API/inference checks left as documented stubs. Deferred to CORE-001: real thermal provider enablement (`AdaptivePerformanceThermalProvider` + AP Android subsystem + define). Deferred to CORE-002: tier→URP-lever consumer, thermal-string display, A.12 overlay widget, RAM metric. Next: CORE-001 (AR Session Manager) — also fixes the deferred ARCore release-APK Gradle namespace clash and enables the thermal provider on device.*
+*Last updated: CORE-001 (AR Session Manager) ✅ DEVICE-VERIFIED on Poco X5 Pro — full success path on hardware: session init → `Tracking` → `AppState` promotes `AR_VIEWER_MODE`→`AR_ACTIVE` (change-only event) → camera passthrough renders → tier holds Nominal at 29.9fps, thermal live (`Temp=0.00`). `ARSessionManager` implements `IArTrackingProvider` (pull model into CORE-007); connectivity split to its own axis (OFFLINE_MODE removed from AppState); 61 tests green (37 EditMode + 24 PlayMode). Device bring-up resolved end-to-end: ARCore Gradle namespace clash (embed `com.unity.xr.arcore` + patch `unityandroidpermissions.aar` — forked package, re-patch on update); GameActivity launcher + `BaseUnityGameActivityTheme`; MIUI Install-via-USB; URP **AR Background Renderer Feature** (the camera-draw pass — was the solid-color-screen cause); FPS threshold = fraction of target with AR target **30** (ARCore caps render at 30, GPU ~3.6ms/CPU ~5ms headroom proves it's a cap not a wall); Adaptive Performance **provider selection** (ADPF Android — the two-toggle gotcha) → thermal now live. TODO: delete the temporary `ARStatusLogger` probe + its AppCore component. Next per build order: CORE-002 (3D Body Model Renderer) — first real GPU load, will exercise the thermal/tier demotion path and the tier→URP-lever consumer.*
+
+*Prior — CORE-007 (Fallback & State Manager) LOGIC PHASE DONE — two-axis model (`AppState` + new `PerformanceTier`); live signals `CheckConnectivity` (debounced → OFFLINE_MODE), `CheckFramerate` (per-frame ring buffer, 1s eval, 30/40 hysteresis), `CheckThermal` (Adaptive Performance mapping, asymmetric heat-fast/cool-slow hysteresis); `max(fps,thermal)` reconciliation; provider seams (`IConnectivityProvider`/`IFrameClock`/`IThermalProvider`) + `InternalsVisibleTo` for tests; thermal localization keys (code) + values (UIStrings via Editor tool); 14 PlayMode + 5 EditMode green; committed + pushed. AR/API/inference checks left as documented stubs. Deferred to CORE-001: real thermal provider enablement (`AdaptivePerformanceThermalProvider` + AP Android subsystem + define). Deferred to CORE-002: tier→URP-lever consumer, thermal-string display, A.12 overlay widget, RAM metric. Next: CORE-001 (AR Session Manager) — also fixes the deferred ARCore release-APK Gradle namespace clash and enables the thermal provider on device.*
 
 *Prior — CORE-008 (Data Layer) DONE — JSON→SO importer + §9 `ContentValidator` + `DataLayer` service (self-registers, re-validates on load) + Editor import tool + Phase 1 content (24 organs, 3 cascades) all green (32 EditMode + 5 PlayMode); committed + pushed. Resolved the physiological_state/BodySystem enum item (→ Cardiovascular). Open: medical review of the 3 cascades (Phase 2 checkpoint), content-JSON build packing.*

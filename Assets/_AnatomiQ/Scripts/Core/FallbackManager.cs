@@ -6,13 +6,17 @@ namespace AnatomiQ.Core
 {
     /// <summary>
     /// CORE-007 — Fallback &amp; State Manager. The always-on authority that owns the global
-    /// <see cref="AppState"/>. It has no fallback of its own; it IS the fallback system, and is
-    /// initialized before any other service (see <see cref="DefaultExecutionOrder"/> below).
+    /// <see cref="AppState"/> (AR context), <see cref="PerformanceTier"/> (quality), and
+    /// <see cref="Connectivity"/> (network). It has no fallback of its own; it IS the fallback
+    /// system, and is initialized before any other service (see <see cref="DefaultExecutionOrder"/>).
     ///
-    /// SHELL ONLY (Section 6): this class holds the state and the monitoring-loop SCAFFOLD. It
-    /// contains NO decision logic — no thresholds, no transitions. Each signal check is an empty
-    /// stub documenting what the CORE-007 logic phase will implement, at which point those checks
-    /// will call <see cref="SetState"/> to drive <see cref="AppState"/>.
+    /// Each global signal is driven by one or more monitoring checks on the <see cref="MonitorLoop"/>
+    /// cadence. <see cref="AppState"/> has a single writer, <see cref="CheckArTracking"/> (CORE-001),
+    /// which pulls AR status from the registered <see cref="IArTrackingProvider"/> and maps it.
+    /// <see cref="Connectivity"/> is driven by <see cref="CheckConnectivity"/> (debounced).
+    /// <see cref="PerformanceTier"/> is the more severe of the FPS and thermal sub-tiers.
+    /// <see cref="CheckInferenceState"/> and <see cref="CheckApiAvailability"/> remain documented
+    /// stubs until their sources exist (CORE-006 / on-device inference).
     /// </summary>
     [DefaultExecutionOrder(-1000)] // Runs first so it registers before all other services.
     public sealed class FallbackManager : MonoBehaviour, IFallbackManager
@@ -29,6 +33,14 @@ namespace AnatomiQ.Core
         [Tooltip("Seconds between monitoring passes. The logic phase reads the monitored signals here.")]
         [SerializeField] private float _monitorIntervalSeconds = 1f;
 
+        [Header("Frame rate")]
+        [Tooltip("Frame rate requested at startup via Application.targetFrameRate. Android's default is " +
+                 "~30, so this makes the target an explicit decision. 60 = ask the device to run smooth; " +
+                 "if AR pins to ~30 on device (ARCore camera cap), set this to 30 and the FPS tiers " +
+                 "recalibrate automatically (thresholds are fractions of this value). Requires VSync OFF " +
+                 "(Quality ▸ VSync Count = Don't Sync), which this project uses.")]
+        [SerializeField] private int _targetFrameRate = 60;
+
         private AppState _currentState;
         private PerformanceTier _currentTier = PerformanceTier.Nominal;
         private Coroutine _monitorRoutine;
@@ -37,15 +49,35 @@ namespace AnatomiQ.Core
         //     PlayMode tests inject fakes via the internal Configure* hooks below. ---
         private IConnectivityProvider _connectivity = new UnityConnectivityProvider();
         private IFrameClock _frameClock = new UnityFrameClock();
-        // Defaults to the inert null provider; the real Adaptive Performance adapter is wired at
-        // CORE-001 (Decision B). Until then CheckThermal never moves the thermal tier.
+        // Thermal source. The real Adaptive Performance adapter is activated on the CORE-001 device
+        // pass by adding the ANATOMIQ_ADAPTIVE_PERFORMANCE scripting define (Project Settings ▸ Player
+        // ▸ Android), after installing + enabling the AP Android (Google) provider. Until the define is
+        // set, the inert NullThermalProvider keeps CheckThermal from ever moving the thermal tier
+        // (editor / PlayMode have no thermal source). AdaptivePerformanceThermalProvider is itself
+        // guarded by the same define, so this reference compiles in both configurations.
+#if ANATOMIQ_ADAPTIVE_PERFORMANCE
+        private IThermalProvider _thermal = new AdaptivePerformanceThermalProvider();
+#else
         private IThermalProvider _thermal = new NullThermalProvider();
+#endif
 
-        // Connectivity debounce: require N consecutive agreeing samples before flipping AppState,
-        // so a single dropped poll can't toggle OFFLINE_MODE. 2 = current + one confirmation.
+        // Connectivity debounce: require N consecutive agreeing samples before flipping the
+        // Connectivity signal, so a single dropped poll can't toggle it. 2 = current + one
+        // confirmation.
         private const int CONNECTIVITY_DEBOUNCE_SAMPLES = 2;
         private int _offlineStreak;
         private int _onlineStreak;
+
+        // Current network reachability (Axis 3). Lifted off AppState at CORE-001 so AR context and
+        // connectivity never mask each other. Starts Online (the non-offline startup assumption);
+        // CheckConnectivity debounces before flipping it.
+        private Connectivity _connectivityState = Connectivity.Online;
+
+        // AR tracking source (CORE-001). The RUNTIME source is the registered IArTrackingProvider,
+        // pulled from the ServiceRegistry inside CheckArTracking. This field is a TEST-ONLY override
+        // (set via ConfigureArTrackingProvider) that takes precedence when present, mirroring how the
+        // other Configure* seams swap their sources; null means "use the registry".
+        private IArTrackingProvider _arTrackingTestOverride;
 
         // --- Framerate (Axis 2 / FPS sub-tier) -------------------------------------------------
         // Two-layer design: a frame ring buffer SMOOTHS instantaneous FPS (kills per-frame jitter),
@@ -53,10 +85,22 @@ namespace AnatomiQ.Core
         // before we act. Thresholds + dwell come from the Performance doc (A.3/A.54) and the global
         // 30fps floor in the Fallback Rules.
         private const int FPS_SAMPLE_WINDOW = 30;          // frames smoothed into the rolling average
-        private const float FPS_DEMOTE_THRESHOLD = 30f;    // below this = "below minimum"
-        private const float FPS_PROMOTE_THRESHOLD = 40f;   // must clear this to recover (hysteresis gap)
+
+        // FPS sub-tier thresholds are FRACTIONS of the requested target frame rate, not absolute
+        // numbers. This is the fix for the CORE-001 calibration bug: when the demote threshold was a
+        // hard 30 and the device's real cap was also 30 (ARCore camera), the rolling average sat a
+        // hair under (29.9) and false-degraded Nominal→Critical forever. Tying the thresholds to the
+        // target means a 30-capped device targeting 30 reads as "on target" (29.9 > 0.75*30 = 22.5),
+        // while a device targeting 60 that only manages 30 correctly reads as "missing target".
+        private const float FPS_DEMOTE_FRACTION = 0.75f;   // sustained below 75% of target = struggling
+        private const float FPS_PROMOTE_FRACTION = 0.87f;  // must clear 87% of target to recover (hysteresis)
         private const float FPS_DEMOTE_SUSTAIN_SECONDS = 3f; // sustained-below time before stepping down
         private const float FPS_PROMOTE_SUSTAIN_SECONDS = 5f; // longer recovery dwell, anti-flap
+
+        // Absolute thresholds derived from the active target in Awake (after Application.targetFrameRate
+        // is set). Computed once; an uncapped/0 target would break the math, so the basis floors at 60.
+        private float _fpsDemoteThreshold;
+        private float _fpsPromoteThreshold;
 
         private readonly float[] _frameDurations = new float[FPS_SAMPLE_WINDOW];
         private int _frameWriteIndex;
@@ -112,12 +156,26 @@ namespace AnatomiQ.Core
         public event Action<PerformanceTier> OnPerformanceTierChanged;
 
         /// <inheritdoc />
+        public Connectivity CurrentConnectivity => _connectivityState;
+
+        /// <inheritdoc />
+        public event Action<Connectivity> OnConnectivityChanged;
+
+        /// <inheritdoc />
         public PerformanceMetrics Metrics =>
             new PerformanceMetrics(_rollingFps, _currentTier, _temperatureLevel, _ramMegabytes);
 
         private void Awake()
         {
             _currentState = _initialState;
+
+            // Make the frame-rate target an explicit decision rather than the Android default (~30).
+            // VSync is off in the Quality settings, so this is honored. The FPS tier thresholds are
+            // derived from the SAME basis, so they stay correct whatever target is chosen.
+            Application.targetFrameRate = _targetFrameRate;
+            float fpsBasis = _targetFrameRate > 0 ? _targetFrameRate : 60f;
+            _fpsDemoteThreshold = fpsBasis * FPS_DEMOTE_FRACTION;
+            _fpsPromoteThreshold = fpsBasis * FPS_PROMOTE_FRACTION;
 
             if (_services == null)
             {
@@ -223,22 +281,57 @@ namespace AnatomiQ.Core
             CheckApiAvailability();
         }
 
-        // --- Signal checks: SCAFFOLD ONLY. The logic phase fills these in; each will read its
-        //     source and call SetState(...) when a threshold is crossed. They do nothing now. ---
-
-        /// <summary>TODO (logic phase): ARCore tracking state → AR_ACTIVE / AR_LIMITED / AR_VIEWER_MODE.</summary>
-        private void CheckArTracking() { }
+        // --- Signal checks. CheckArTracking / CheckConnectivity / CheckThermal / CheckFramerate are
+        //     implemented. CheckInferenceState / CheckApiAvailability remain documented stubs until
+        //     their sources exist (CORE-006 / on-device inference). ---
 
         /// <summary>
-        /// Connectivity signal → <see cref="AppState.OFFLINE_MODE"/>. Reads reachability through
-        /// <see cref="_connectivity"/> and debounces by <see cref="CONNECTIVITY_DEBOUNCE_SAMPLES"/>
-        /// consecutive agreeing samples so a single dropped poll cannot flip state.
+        /// AR tracking signal → <see cref="AppState"/> (CORE-001). PULLS the current
+        /// <see cref="ArTrackingStatus"/> from the registered <see cref="IArTrackingProvider"/> (or a
+        /// test override) and maps it via <see cref="MapArState"/>. A missing provider (no AR scene
+        /// active, or no ARCore) resolves to <see cref="ArTrackingStatus.Unavailable"/> →
+        /// <see cref="AppState.AR_VIEWER_MODE"/>, the safe baseline — so this is NOT inert when the
+        /// source is absent (unlike thermal): "no AR" legitimately means viewer mode.
         ///
-        /// Promotion rule: when connectivity returns, this promotes ONLY
-        /// <see cref="AppState.OFFLINE_MODE"/> → <see cref="AppState.AR_VIEWER_MODE"/> (the safe
-        /// baseline). It deliberately does NOT promote to <see cref="AppState.AR_ACTIVE"/> — AR
-        /// health is unknown until CORE-001 wires <c>CheckArTracking</c>. It also never overrides a
-        /// non-offline state, so it won't stomp states owned by other (future) signals.
+        /// This is the SOLE writer of <see cref="AppState"/>. Connectivity and thermal/FPS drive their
+        /// own signals, so there is no cross-signal contention here (the reason connectivity was lifted
+        /// off the AppState axis at CORE-001). Sampling latency is the ~1s monitor cadence; the instant
+        /// visual reaction to tracking loss is CORE-001's own change-only event, not this path.
+        /// </summary>
+        private void CheckArTracking()
+        {
+            IArTrackingProvider provider = _arTrackingTestOverride ?? _services?.ArTrackingProvider;
+            ArTrackingStatus status = provider?.Status ?? ArTrackingStatus.Unavailable;
+            SetState(MapArState(status));
+        }
+
+        /// <summary>
+        /// Pure mapping from AR tracking status to global <see cref="AppState"/>. Static and
+        /// side-effect-free so it's trivially unit-testable in isolation.
+        /// </summary>
+        private static AppState MapArState(ArTrackingStatus status)
+        {
+            switch (status)
+            {
+                case ArTrackingStatus.Tracking:
+                    return AppState.AR_ACTIVE;
+                case ArTrackingStatus.Limited:
+                case ArTrackingStatus.NotTracking:
+                    return AppState.AR_LIMITED;
+                default: // Unavailable, PermissionDenied, Initializing
+                    return AppState.AR_VIEWER_MODE;
+            }
+        }
+
+        /// <summary>
+        /// Connectivity signal → <see cref="Connectivity"/> (Axis 3). Reads reachability through
+        /// <see cref="_connectivity"/> and debounces by <see cref="CONNECTIVITY_DEBOUNCE_SAMPLES"/>
+        /// consecutive agreeing samples so a single dropped poll cannot flip the signal.
+        ///
+        /// CORE-001: this no longer touches <see cref="AppState"/>. Connectivity is its own axis, so
+        /// going offline cannot mask AR context (and AR context cannot mask offline). The debounce is
+        /// unchanged from the logic-phase implementation; only the target signal moved.
+        /// <see cref="SetConnectivity"/>'s equality guard means staying offline/online never re-fires.
         /// </summary>
         private void CheckConnectivity()
         {
@@ -255,21 +348,13 @@ namespace AnatomiQ.Core
                 _onlineStreak = 0;
             }
 
-            // Demote to OFFLINE_MODE once we've seen enough consecutive unreachable samples.
-            if (!reachable
-                && _offlineStreak >= CONNECTIVITY_DEBOUNCE_SAMPLES
-                && _currentState != AppState.OFFLINE_MODE)
+            if (!reachable && _offlineStreak >= CONNECTIVITY_DEBOUNCE_SAMPLES)
             {
-                SetState(AppState.OFFLINE_MODE);
-                return;
+                SetConnectivity(Connectivity.Offline);
             }
-
-            // Promote out of OFFLINE_MODE only — and only to the safe baseline, not AR_ACTIVE.
-            if (reachable
-                && _onlineStreak >= CONNECTIVITY_DEBOUNCE_SAMPLES
-                && _currentState == AppState.OFFLINE_MODE)
+            else if (reachable && _onlineStreak >= CONNECTIVITY_DEBOUNCE_SAMPLES)
             {
-                SetState(AppState.AR_VIEWER_MODE);
+                SetConnectivity(Connectivity.Online);
             }
         }
 
@@ -351,10 +436,10 @@ namespace AnatomiQ.Core
         /// Framerate signal → FPS sub-tier. Reads the smoothed <see cref="RollingFps"/> and applies
         /// sustained-duration logic with hysteresis so it doesn't flap at the 30 FPS boundary:
         /// <list type="bullet">
-        /// <item>Below <see cref="FPS_DEMOTE_THRESHOLD"/> for <see cref="FPS_DEMOTE_SUSTAIN_SECONDS"/>
-        /// → step the FPS tier UP one level (more severe).</item>
-        /// <item>Above <see cref="FPS_PROMOTE_THRESHOLD"/> for <see cref="FPS_PROMOTE_SUSTAIN_SECONDS"/>
-        /// → step the FPS tier DOWN one level (recover).</item>
+        /// <item>Below the demote threshold (<see cref="FPS_DEMOTE_FRACTION"/> of target) for
+        /// <see cref="FPS_DEMOTE_SUSTAIN_SECONDS"/> → step the FPS tier UP one level (more severe).</item>
+        /// <item>Above the promote threshold (<see cref="FPS_PROMOTE_FRACTION"/> of target) for
+        /// <see cref="FPS_PROMOTE_SUSTAIN_SECONDS"/> → step the FPS tier DOWN one level (recover).</item>
         /// </list>
         /// The separate enter (30) / exit (40) thresholds plus the longer recovery dwell are the
         /// anti-flap mechanism. Stepwise (one level per qualifying interval), never a jump. The
@@ -375,19 +460,20 @@ namespace AnatomiQ.Core
 
             float elapsed = _monitorIntervalSeconds; // nominal step; tests can override via TickForTest
 
-            if (_rollingFps < FPS_DEMOTE_THRESHOLD)
+            if (_rollingFps < _fpsDemoteThreshold)
             {
                 _belowThresholdSeconds += elapsed;
                 _aboveThresholdSeconds = 0f;
             }
-            else if (_rollingFps > FPS_PROMOTE_THRESHOLD)
+            else if (_rollingFps > _fpsPromoteThreshold)
             {
                 _aboveThresholdSeconds += elapsed;
                 _belowThresholdSeconds = 0f;
             }
             else
             {
-                // In the dead-band between 30 and 40: hold steady, decay both timers.
+                // In the hysteresis dead-band (between the demote and promote thresholds): hold
+                // steady, decay both timers.
                 _belowThresholdSeconds = 0f;
                 _aboveThresholdSeconds = 0f;
             }
@@ -415,9 +501,10 @@ namespace AnatomiQ.Core
         private void CheckApiAvailability() { }
 
         /// <summary>
-        /// Sets the global state and raises <see cref="OnAppStateChanged"/> when it changes. This is
-        /// the state-change MECHANISM (infrastructure), not decision logic. It is intentionally not
-        /// invoked yet; the logic phase calls it from the signal checks above.
+        /// Sets the global AR-context state and raises <see cref="OnAppStateChanged"/> when it
+        /// changes. This is the state-change MECHANISM (infrastructure), not decision logic; its sole
+        /// caller is <see cref="CheckArTracking"/> (CORE-001). The equality guard makes the broadcast
+        /// change-only — re-asserting the same status each tick fires no event.
         /// </summary>
         /// <param name="next">The state to transition to.</param>
         private void SetState(AppState next)
@@ -429,6 +516,24 @@ namespace AnatomiQ.Core
 
             _currentState = next;
             OnAppStateChanged?.Invoke(_currentState);
+        }
+
+        /// <summary>
+        /// Sets the network connectivity signal and raises <see cref="OnConnectivityChanged"/> when it
+        /// changes. Mirror of <see cref="SetState"/> for Axis 3 — the change MECHANISM, not the
+        /// decision logic. Called by <see cref="CheckConnectivity"/> after its debounce. The equality
+        /// guard means staying offline (or online) never re-fires the event.
+        /// </summary>
+        /// <param name="next">The connectivity value to transition to.</param>
+        private void SetConnectivity(Connectivity next)
+        {
+            if (next == _connectivityState)
+            {
+                return;
+            }
+
+            _connectivityState = next;
+            OnConnectivityChanged?.Invoke(_connectivityState);
         }
 
         /// <summary>
@@ -490,6 +595,16 @@ namespace AnatomiQ.Core
             {
                 _thermal = provider;
             }
+        }
+
+        /// <summary>
+        /// Test-only: set the AR tracking source override that <see cref="CheckArTracking"/> prefers
+        /// over the registry-provided one. Unlike the other Configure* seams, null is ALLOWED here and
+        /// CLEARS the override (so a test can fall back to the registry path).
+        /// </summary>
+        internal void ConfigureArTrackingProvider(IArTrackingProvider provider)
+        {
+            _arTrackingTestOverride = provider;
         }
 
         /// <summary>Test-only: read the thermal sub-tier in isolation (before reconciliation).</summary>

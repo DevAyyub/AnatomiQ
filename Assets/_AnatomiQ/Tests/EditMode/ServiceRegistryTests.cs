@@ -26,8 +26,19 @@ namespace AnatomiQ.Tests.EditMode
             public event Action<PerformanceTier> OnPerformanceTierChanged;
             public void FireTier(PerformanceTier tier) => OnPerformanceTierChanged?.Invoke(tier);
 
+            // Axis 3: connectivity (added with the CORE-001 connectivity-axis split).
+            public Connectivity CurrentConnectivity { get; set; } = Connectivity.Online;
+            public event Action<Connectivity> OnConnectivityChanged;
+            public void FireConnectivity(Connectivity c) => OnConnectivityChanged?.Invoke(c);
+
             public PerformanceMetrics Metrics =>
                 new PerformanceMetrics(0f, CurrentTier, -1f, -1f);
+        }
+
+        // Minimal IArTrackingProvider (CORE-001) for the registration/clear tests.
+        private sealed class MockArTracking : IArTrackingProvider
+        {
+            public ArTrackingStatus Status { get; set; } = ArTrackingStatus.Tracking;
         }
 
         private ServiceRegistry _registry;
@@ -45,6 +56,7 @@ namespace AnatomiQ.Tests.EditMode
             Assert.IsNull(_registry.AIOrchestrator);
             Assert.IsNull(_registry.BodyRenderer);
             Assert.IsNull(_registry.DataLayer);
+            Assert.IsNull(_registry.ArTrackingProvider);
         }
 
         [Test]
@@ -60,8 +72,33 @@ namespace AnatomiQ.Tests.EditMode
         public void Clear_RemovesAllRegistrations()
         {
             _registry.Register(new MockFallbackManager());
+            _registry.Register(new MockArTracking());
             _registry.Clear();
             Assert.IsNull(_registry.FallbackManager);
+            Assert.IsNull(_registry.ArTrackingProvider);
+        }
+
+        [Test]
+        public void Register_StoresArTrackingProvider_UnderCorrectInterface()
+        {
+            var ar = new MockArTracking();
+            _registry.Register(ar);
+            Assert.AreSame(ar, _registry.ArTrackingProvider);
+            Assert.IsNull(_registry.FallbackManager, "AR registration must not touch other slots.");
+        }
+
+        [Test]
+        public void ClearArTrackingProvider_ClearsMatchingInstanceOnly()
+        {
+            var ar = new MockArTracking();
+            _registry.Register(ar);
+
+            _registry.ClearArTrackingProvider(new MockArTracking()); // different instance
+            Assert.AreSame(ar, _registry.ArTrackingProvider,
+                "Clearing a different instance must be a no-op (avoids a torn-down provider wiping a newer one).");
+
+            _registry.ClearArTrackingProvider(ar); // matching instance
+            Assert.IsNull(_registry.ArTrackingProvider, "Clearing the registered instance removes it.");
         }
     }
 }

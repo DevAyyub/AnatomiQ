@@ -25,6 +25,7 @@ namespace AnatomiQ.Core
         [System.NonSerialized] private IAIOrchestrator _aiOrchestrator;
         [System.NonSerialized] private IBodyModelRenderer _bodyRenderer;
         [System.NonSerialized] private IDataLayer _dataLayer;
+        [System.NonSerialized] private IArTrackingProvider _arTracking;
 
         /// <summary>CORE-007. Null until the FallbackManager registers (first, at startup).</summary>
         public IFallbackManager FallbackManager => _fallbackManager;
@@ -37,6 +38,13 @@ namespace AnatomiQ.Core
 
         /// <summary>CORE-008. Null until the Data Layer registers.</summary>
         public IDataLayer DataLayer => _dataLayer;
+
+        /// <summary>
+        /// CORE-001. Null until an AR session manager registers, and null again after the AR scene
+        /// unloads (the implementer calls <see cref="ClearArTrackingProvider"/> on teardown). CORE-007
+        /// treats a null provider as <see cref="ArTrackingStatus.Unavailable"/> → AR_VIEWER_MODE.
+        /// </summary>
+        public IArTrackingProvider ArTrackingProvider => _arTracking;
 
         /// <summary>
         /// Registers a Core service under whichever known interface(s) it implements.
@@ -64,6 +72,10 @@ namespace AnatomiQ.Core
                     WarnIfReplacing(_bodyRenderer, nameof(IBodyModelRenderer));
                     _bodyRenderer = body;
                     break;
+                case IArTrackingProvider arTracking:
+                    WarnIfReplacing(_arTracking, nameof(IArTrackingProvider));
+                    _arTracking = arTracking;
+                    break;
                 default:
                     Debug.LogWarning(
                         $"[ServiceRegistry] '{service.GetType().Name}' implements no known " +
@@ -88,6 +100,22 @@ namespace AnatomiQ.Core
             _dataLayer = dataLayer;
         }
 
+        /// <summary>
+        /// Clears the registered AR tracking provider (CORE-001) IF it is still the given instance.
+        /// Called by the AR session manager from OnDestroy when its scene unloads. The identity check
+        /// avoids a torn-down provider wiping a newer one that already re-registered. AR is the one
+        /// service with a sub-session lifecycle (scenes load/unload), which is why it has an explicit
+        /// clear that the always-resident services do not need.
+        /// </summary>
+        /// <param name="provider">The provider that is tearing down.</param>
+        public void ClearArTrackingProvider(IArTrackingProvider provider)
+        {
+            if (_arTracking == provider)
+            {
+                _arTracking = null;
+            }
+        }
+
         /// <summary>Clears all registered services so stale scene refs never leak between play sessions.</summary>
         public void Clear()
         {
@@ -95,6 +123,7 @@ namespace AnatomiQ.Core
             _aiOrchestrator = null;
             _bodyRenderer = null;
             _dataLayer = null;
+            _arTracking = null;
         }
 
         private static void WarnIfReplacing(object existing, string interfaceName)

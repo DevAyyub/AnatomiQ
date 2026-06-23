@@ -29,5 +29,16 @@
 
     <!-- Empty application node kept as the documented hook for any future
          app-level entries we need that Unity/ARCore do not auto-inject. -->
-    <application tools:node="merge" />
+    <application tools:node="merge">
+        <activity
+            android:name="com.unity3d.player.UnityPlayerGameActivity"
+            android:theme="@style/BaseUnityGameActivityTheme"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="unityplayer.UnityActivity" android:value="true" />
+        </activity>
+    </application>
 </manifest>

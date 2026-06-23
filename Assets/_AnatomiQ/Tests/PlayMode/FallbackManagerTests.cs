@@ -26,6 +26,12 @@ namespace AnatomiQ.Tests.PlayMode
             public bool IsReachable => Reachable;
         }
 
+        // Fake AR tracking source so status → AppState transitions are deterministic without a session.
+        private sealed class FakeArTracking : IArTrackingProvider
+        {
+            public ArTrackingStatus Status { get; set; } = ArTrackingStatus.Unavailable;
+        }
+
         // Builds an active FallbackManager wired to a fresh registry, exactly as the inspector would.
         private static FallbackManager NewManager(out ServiceRegistry registry)
         {
@@ -62,10 +68,10 @@ namespace AnatomiQ.Tests.PlayMode
             Object.Destroy(registry);
         }
 
-        // ----- Connectivity → AppState (debounced) --------------------------------------------
+        // ----- Connectivity signal (debounced, own axis) -------------------------------------
 
         [UnityTest]
-        public IEnumerator Connectivity_TwoOfflineSamples_EntersOfflineMode_Once()
+        public IEnumerator Connectivity_TwoOfflineSamples_GoesOffline_Once()
         {
             var fm = NewManager(out var registry);
             yield return null;
@@ -73,31 +79,35 @@ namespace AnatomiQ.Tests.PlayMode
             var conn = new FakeConnectivity { Reachable = true };
             fm.ConfigureConnectivityProvider(conn);
 
-            var seen = new List<AppState>();
-            fm.OnAppStateChanged += s => seen.Add(s);
+            var seen = new List<Connectivity>();
+            fm.OnConnectivityChanged += c => seen.Add(c);
 
             conn.Reachable = false;
             fm.TickForTest();
-            Assert.AreEqual(AppState.AR_VIEWER_MODE, fm.CurrentState,
-                "A single offline sample must not flip state (debounce).");
+            Assert.AreEqual(Connectivity.Online, fm.CurrentConnectivity,
+                "A single offline sample must not flip the signal (debounce).");
             Assert.AreEqual(0, seen.Count, "No event should fire on a single offline sample.");
 
             fm.TickForTest();
-            Assert.AreEqual(AppState.OFFLINE_MODE, fm.CurrentState,
-                "Two consecutive offline samples should enter OFFLINE_MODE.");
-            Assert.AreEqual(1, seen.Count, "Exactly one state-change event should fire.");
-            Assert.AreEqual(AppState.OFFLINE_MODE, seen[0]);
+            Assert.AreEqual(Connectivity.Offline, fm.CurrentConnectivity,
+                "Two consecutive offline samples should go Offline.");
+            Assert.AreEqual(1, seen.Count, "Exactly one connectivity event should fire.");
+            Assert.AreEqual(Connectivity.Offline, seen[0]);
 
             fm.TickForTest();
             fm.TickForTest();
             Assert.AreEqual(1, seen.Count, "Staying offline must not re-fire the event.");
+
+            // CORE-001: connectivity is its own axis and must not touch AppState.
+            Assert.AreEqual(AppState.AR_VIEWER_MODE, fm.CurrentState,
+                "Going offline must leave AppState untouched.");
 
             Object.Destroy(fm.gameObject);
             Object.Destroy(registry);
         }
 
         [UnityTest]
-        public IEnumerator Connectivity_Restored_PromotesToViewerMode_NotArActive()
+        public IEnumerator Connectivity_Restored_GoesOnline_AppStateUntouched()
         {
             var fm = NewManager(out var registry);
             yield return null;
@@ -105,22 +115,29 @@ namespace AnatomiQ.Tests.PlayMode
             var conn = new FakeConnectivity { Reachable = false };
             fm.ConfigureConnectivityProvider(conn);
             fm.TickForTest();
-            fm.TickForTest(); // now OFFLINE_MODE
-            Assert.AreEqual(AppState.OFFLINE_MODE, fm.CurrentState);
+            fm.TickForTest(); // now Offline
+            Assert.AreEqual(Connectivity.Offline, fm.CurrentConnectivity);
 
-            var seen = new List<AppState>();
-            fm.OnAppStateChanged += s => seen.Add(s);
+            var connSeen = new List<Connectivity>();
+            var stateSeen = new List<AppState>();
+            fm.OnConnectivityChanged += c => connSeen.Add(c);
+            fm.OnAppStateChanged += s => stateSeen.Add(s);
 
             conn.Reachable = true;
             fm.TickForTest();
-            Assert.AreEqual(AppState.OFFLINE_MODE, fm.CurrentState,
+            Assert.AreEqual(Connectivity.Offline, fm.CurrentConnectivity,
                 "A single online sample must not promote yet (debounce).");
 
             fm.TickForTest();
-            Assert.AreEqual(AppState.AR_VIEWER_MODE, fm.CurrentState,
-                "Restored connectivity promotes to the safe baseline, never directly to AR_ACTIVE.");
-            Assert.AreEqual(1, seen.Count);
-            Assert.AreEqual(AppState.AR_VIEWER_MODE, seen[0]);
+            Assert.AreEqual(Connectivity.Online, fm.CurrentConnectivity,
+                "Two consecutive online samples should return to Online.");
+            Assert.AreEqual(1, connSeen.Count);
+            Assert.AreEqual(Connectivity.Online, connSeen[0]);
+
+            // The old "never jumps to AR_ACTIVE on restore" intent is now structural: connectivity
+            // physically cannot write AppState, so AppState never moved at all.
+            Assert.AreEqual(AppState.AR_VIEWER_MODE, fm.CurrentState);
+            Assert.AreEqual(0, stateSeen.Count, "Connectivity changes must fire no AppState events.");
 
             Object.Destroy(fm.gameObject);
             Object.Destroy(registry);
@@ -135,8 +152,8 @@ namespace AnatomiQ.Tests.PlayMode
             var conn = new FakeConnectivity { Reachable = true };
             fm.ConfigureConnectivityProvider(conn);
 
-            var seen = new List<AppState>();
-            fm.OnAppStateChanged += s => seen.Add(s);
+            var seen = new List<Connectivity>();
+            fm.OnConnectivityChanged += c => seen.Add(c);
 
             // Alternate every sample so neither streak ever reaches 2.
             conn.Reachable = false; fm.TickForTest();
@@ -144,9 +161,142 @@ namespace AnatomiQ.Tests.PlayMode
             conn.Reachable = false; fm.TickForTest();
             conn.Reachable = true;  fm.TickForTest();
 
-            Assert.AreEqual(AppState.AR_VIEWER_MODE, fm.CurrentState,
-                "Alternating samples never satisfy the debounce, so state must not change.");
+            Assert.AreEqual(Connectivity.Online, fm.CurrentConnectivity,
+                "Alternating samples never satisfy the debounce, so the signal must not change.");
             Assert.AreEqual(0, seen.Count, "Flapping must fire no events.");
+
+            Object.Destroy(fm.gameObject);
+            Object.Destroy(registry);
+        }
+
+        // ----- AR tracking → AppState (CORE-001) ---------------------------------------------
+
+        [UnityTest]
+        public IEnumerator ArTracking_Tracking_PromotesToArActive()
+        {
+            var fm = NewManager(out var registry);
+            yield return null;
+
+            var ar = new FakeArTracking { Status = ArTrackingStatus.Tracking };
+            fm.ConfigureArTrackingProvider(ar);
+
+            var seen = new List<AppState>();
+            fm.OnAppStateChanged += s => seen.Add(s);
+
+            fm.TickForTest();
+            Assert.AreEqual(AppState.AR_ACTIVE, fm.CurrentState,
+                "Tracking status should promote AppState to AR_ACTIVE.");
+            Assert.AreEqual(1, seen.Count);
+            Assert.AreEqual(AppState.AR_ACTIVE, seen[0]);
+
+            Object.Destroy(fm.gameObject);
+            Object.Destroy(registry);
+        }
+
+        [UnityTest]
+        public IEnumerator ArTracking_LimitedAndNotTracking_MapToArLimited_NoRefire()
+        {
+            var fm = NewManager(out var registry);
+            yield return null;
+
+            var ar = new FakeArTracking { Status = ArTrackingStatus.Tracking };
+            fm.ConfigureArTrackingProvider(ar);
+            fm.TickForTest(); // AR_ACTIVE
+            Assert.AreEqual(AppState.AR_ACTIVE, fm.CurrentState);
+
+            var seen = new List<AppState>();
+            fm.OnAppStateChanged += s => seen.Add(s);
+
+            ar.Status = ArTrackingStatus.Limited;
+            fm.TickForTest();
+            Assert.AreEqual(AppState.AR_LIMITED, fm.CurrentState, "Limited maps to AR_LIMITED.");
+            Assert.AreEqual(1, seen.Count);
+
+            // NotTracking also maps to AR_LIMITED — same state, so the change-only broadcast must not
+            // re-fire.
+            ar.Status = ArTrackingStatus.NotTracking;
+            fm.TickForTest();
+            Assert.AreEqual(AppState.AR_LIMITED, fm.CurrentState, "NotTracking also maps to AR_LIMITED.");
+            Assert.AreEqual(1, seen.Count, "Limited→NotTracking is the same AppState; no new event.");
+
+            Object.Destroy(fm.gameObject);
+            Object.Destroy(registry);
+        }
+
+        [UnityTest]
+        public IEnumerator ArTracking_PermissionDenied_DemotesToViewerMode()
+        {
+            var fm = NewManager(out var registry);
+            yield return null;
+
+            var ar = new FakeArTracking { Status = ArTrackingStatus.Tracking };
+            fm.ConfigureArTrackingProvider(ar);
+            fm.TickForTest(); // AR_ACTIVE
+            Assert.AreEqual(AppState.AR_ACTIVE, fm.CurrentState);
+
+            ar.Status = ArTrackingStatus.PermissionDenied;
+            fm.TickForTest();
+            Assert.AreEqual(AppState.AR_VIEWER_MODE, fm.CurrentState,
+                "Permission denied maps to the viewer-mode baseline.");
+
+            Object.Destroy(fm.gameObject);
+            Object.Destroy(registry);
+        }
+
+        [UnityTest]
+        public IEnumerator ArTracking_NoProvider_StaysViewerMode()
+        {
+            var fm = NewManager(out var registry);
+            yield return null;
+
+            // No AR provider configured and none registered → resolves to Unavailable → viewer mode,
+            // which is also the initial state, so nothing changes and no event fires.
+            var seen = new List<AppState>();
+            fm.OnAppStateChanged += s => seen.Add(s);
+
+            for (int i = 0; i < 3; i++)
+            {
+                fm.TickForTest();
+            }
+
+            Assert.AreEqual(AppState.AR_VIEWER_MODE, fm.CurrentState);
+            Assert.AreEqual(0, seen.Count, "A missing AR provider must not fire any AppState event.");
+
+            Object.Destroy(fm.gameObject);
+            Object.Destroy(registry);
+        }
+
+        [UnityTest]
+        public IEnumerator ArTracking_ActiveWhileOffline_NoAppStateFlap()
+        {
+            // The CORE-001 payoff: AR active + going offline must NOT flap AppState. AR owns AppState,
+            // connectivity owns its own axis; both stay steady and truthful at the same time.
+            var fm = NewManager(out var registry);
+            yield return null;
+
+            var ar = new FakeArTracking { Status = ArTrackingStatus.Tracking };
+            var conn = new FakeConnectivity { Reachable = true };
+            fm.ConfigureArTrackingProvider(ar);
+            fm.ConfigureConnectivityProvider(conn);
+
+            fm.TickForTest(); // AR_ACTIVE, Online
+            Assert.AreEqual(AppState.AR_ACTIVE, fm.CurrentState);
+
+            var stateSeen = new List<AppState>();
+            fm.OnAppStateChanged += s => stateSeen.Add(s);
+
+            // Go offline and stay offline across several ticks.
+            conn.Reachable = false;
+            for (int i = 0; i < 5; i++)
+            {
+                fm.TickForTest();
+            }
+
+            Assert.AreEqual(AppState.AR_ACTIVE, fm.CurrentState,
+                "AppState must remain AR_ACTIVE while offline — no masking, no flap.");
+            Assert.AreEqual(0, stateSeen.Count, "Going offline must not fire any AppState event.");
+            Assert.AreEqual(Connectivity.Offline, fm.CurrentConnectivity,
+                "Connectivity is reported truthfully and independently.");
 
             Object.Destroy(fm.gameObject);
             Object.Destroy(registry);
@@ -173,7 +323,7 @@ namespace AnatomiQ.Tests.PlayMode
 
             fm.TickForTest(); // 3s below
             Assert.AreEqual(PerformanceTier.Reduced, fm.CurrentTier,
-                "Sustained sub-30 FPS for 3s should step the tier to Reduced.");
+                "Sustained FPS below the demote threshold for 3s should step the tier to Reduced.");
             Assert.AreEqual(1, tiers.Count, "Exactly one tier event on the first demote.");
 
             Object.Destroy(fm.gameObject);
@@ -190,14 +340,16 @@ namespace AnatomiQ.Tests.PlayMode
             var tiers = new List<PerformanceTier>();
             fm.OnPerformanceTierChanged += t => tiers.Add(t);
 
-            fm.PrimeFramerateForTest(35f); // between the 30 demote and 40 promote thresholds
+            // Default target is 60, so thresholds are 45 (demote) and 52.2 (promote). 48 sits in the
+            // dead-band between them.
+            fm.PrimeFramerateForTest(48f);
             for (int i = 0; i < 6; i++)
             {
                 fm.TickForTest();
             }
 
             Assert.AreEqual(PerformanceTier.Nominal, fm.CurrentTier,
-                "FPS in the 30–40 hysteresis dead-band must not change the tier.");
+                "FPS in the hysteresis dead-band (between demote and promote thresholds) must not change the tier.");
             Assert.AreEqual(0, tiers.Count);
 
             Object.Destroy(fm.gameObject);
@@ -224,7 +376,7 @@ namespace AnatomiQ.Tests.PlayMode
 
             fm.TickForTest();
             Assert.AreEqual(PerformanceTier.Nominal, fm.CurrentTier,
-                "5s above 40 FPS should step the tier back down to Nominal.");
+                "5s above the promote threshold should step the tier back down to Nominal.");
 
             Object.Destroy(fm.gameObject);
             Object.Destroy(registry);
@@ -421,8 +573,10 @@ namespace AnatomiQ.Tests.PlayMode
             var fm = NewManager(out var registry);
             yield return null;
 
-            // Reachable + cool + good FPS throughout: every LIVE signal is in its no-op range, so any
-            // state/tier change could only come from a stub check (AR/API/inference). None should.
+            // Reachable + cool + good FPS throughout, and no AR provider registered. Every live signal
+            // is in its no-op range: connectivity holds Online (own axis, doesn't touch AppState),
+            // FPS/thermal hold Nominal, AR with no provider resolves to viewer mode (= the initial
+            // state), and the API/inference checks are still stubs. So neither AppState nor tier moves.
             fm.ConfigureConnectivityProvider(new FakeConnectivity { Reachable = true });
             fm.ConfigureThermalProvider(new FakeThermal
             {
