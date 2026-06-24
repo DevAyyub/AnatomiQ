@@ -1,7 +1,12 @@
 {
     "name": "AnatomiQ.Anatomy",
     "rootNamespace": "AnatomiQ.Anatomy",
-    "references": ["AnatomiQ.Core", "AnatomiQ.Data"],
+    "references": [
+        "AnatomiQ.Core",
+        "AnatomiQ.Data",
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Unity.RenderPipelines.Core.Runtime"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

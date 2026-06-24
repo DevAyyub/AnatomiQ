@@ -5,7 +5,9 @@
         "AnatomiQ.Core",
         "AnatomiQ.Data",
         "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner"
+        "UnityEditor.TestRunner",
+        "AnatomiQ.Anatomy",
+        "AnatomiQ.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

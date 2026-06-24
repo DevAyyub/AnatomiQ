@@ -119,6 +119,38 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &201140442
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 201140443}
+  m_Layer: 0
+  m_Name: BodyRoot
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &201140443
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 201140442}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -2, z: 2}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1522694644}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
@@ -343,6 +375,8 @@ GameObject:
   - component: {fileID: 801770739}
   - component: {fileID: 801770738}
   - component: {fileID: 801770741}
+  - component: {fileID: 801770742}
+  - component: {fileID: 801770743}
   m_Layer: 0
   m_Name: AppCore
   m_TagString: Untagged
@@ -412,6 +446,50 @@ MonoBehaviour:
   _planeManager: {fileID: 458936978}
   _anchorManager: {fileID: 458936977}
   _attemptInstallIfNeeded: 1
+--- !u!114 &801770742
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 801770737}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dbf4b7563ffd68f4cb719dd9d00534cd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AnatomiQ.Anatomy::AnatomiQ.Anatomy.BodyRenderer
+  _services: {fileID: 11400000, guid: 245bc1958fd39094aaa278ddd821c09b, type: 2}
+  _modelRoot: {fileID: 201140443}
+  _organMaterials:
+  - nameToken: AQ_Heart
+    material: {fileID: 2100000, guid: 1cac3767296b9594499e2343cb3ce97a, type: 2}
+  - nameToken: AQ_Coronary
+    material: {fileID: 2100000, guid: 71775291675112247b0074a039334bd5, type: 2}
+  - nameToken: AQ_Eye
+    material: {fileID: 2100000, guid: ee445fdec934024438d67baf7933a26c, type: 2}
+  - nameToken: AQ_Pancreas
+    material: {fileID: 2100000, guid: b534c98bea87c5046b484bb97bd5d118, type: 2}
+  - nameToken: AQ_Kidney
+    material: {fileID: 2100000, guid: ea5af00d1532ee144bc3b2cb54bdb577, type: 2}
+  - nameToken: AQ_Nerves_Leg
+    material: {fileID: 2100000, guid: 1850fd61cc580b14e8c9a064832a18bb, type: 2}
+  _bodyShellToken: AQ_BodyShell
+  _bodyShellMaterial: {fileID: 2100000, guid: 007ee2664f3905b4d9ffd030a32b583f, type: 2}
+  _postProcessVolume: {fileID: 832575518}
+--- !u!114 &801770743
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 801770737}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1814217f0c474fd4090e9837df2c7c6c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AnatomiQ.UI::AnatomiQ.UI.PerformanceOverlay
+  _services: {fileID: 11400000, guid: 245bc1958fd39094aaa278ddd821c09b, type: 2}
+  _startVisible: 1
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -767,6 +845,68 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
+--- !u!1001 &1522694643
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 201140443}
+    m_Modifications:
+    - target: {fileID: -3910990755373119420, guid: e57c827e50cfcbf4fbcbe3d42781d70b, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -3910990755373119420, guid: e57c827e50cfcbf4fbcbe3d42781d70b, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -3910990755373119420, guid: e57c827e50cfcbf4fbcbe3d42781d70b, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -3910990755373119420, guid: e57c827e50cfcbf4fbcbe3d42781d70b, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -3910990755373119420, guid: e57c827e50cfcbf4fbcbe3d42781d70b, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -3910990755373119420, guid: e57c827e50cfcbf4fbcbe3d42781d70b, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -3910990755373119420, guid: e57c827e50cfcbf4fbcbe3d42781d70b, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -3910990755373119420, guid: e57c827e50cfcbf4fbcbe3d42781d70b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -3910990755373119420, guid: e57c827e50cfcbf4fbcbe3d42781d70b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -3910990755373119420, guid: e57c827e50cfcbf4fbcbe3d42781d70b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8771091787928289351, guid: e57c827e50cfcbf4fbcbe3d42781d70b, type: 3}
+      propertyPath: m_Name
+      value: AnatomiQ_Full
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: -4161369568681901532, guid: e57c827e50cfcbf4fbcbe3d42781d70b, type: 3}
+--- !u!4 &1522694644 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -3910990755373119420, guid: e57c827e50cfcbf4fbcbe3d42781d70b, type: 3}
+  m_PrefabInstance: {fileID: 1522694643}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &2098502735
 GameObject:
   m_ObjectHideFlags: 0
@@ -836,3 +976,4 @@ SceneRoots:
   - {fileID: 801770740}
   - {fileID: 2098502738}
   - {fileID: 458936976}
+  - {fileID: 201140443}

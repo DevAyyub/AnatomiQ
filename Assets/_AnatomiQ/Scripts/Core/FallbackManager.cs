@@ -61,6 +61,12 @@ namespace AnatomiQ.Core
         private IThermalProvider _thermal = new NullThermalProvider();
 #endif
 
+        // Memory footprint source. Unlike thermal there's no "unavailable" state to guard — the
+        // Profiler memory API is always present (it returns -1 via the probe if it can't read).
+        // RAM is sampled for the A.12 overlay only; it does NOT drive a tier this chunk (RAM-driven
+        // degradation is tied to the still-deferred mesh/LOD lever).
+        private IMemoryProbe _memoryProbe = new UnityMemoryProbe();
+
         // Connectivity debounce: require N consecutive agreeing samples before flipping the
         // Connectivity signal, so a single dropped poll can't toggle it. 2 = current + one
         // confirmation.
@@ -114,6 +120,13 @@ namespace AnatomiQ.Core
         // Per-axis tiers; published CurrentTier is the more severe (max) of the two.
         private PerformanceTier _fpsTier = PerformanceTier.Nominal;
         private PerformanceTier _thermalTier = PerformanceTier.Nominal;
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        // Chunk-6 verification aid: when set, pins the published tier regardless of the FPS/thermal
+        // sub-tiers so CORE-002's URP levers can be exercised on device without waiting for real
+        // throttling. Honored inside ReconcileTier; stripped entirely from release builds.
+        private PerformanceTier? _debugTierOverride;
+#endif
 
         // --- Thermal (Axis 2 / thermal sub-tier) -----------------------------------------------
         // The TemperatureLevel that splits ThrottlingImminent into Moderate (Reduced) vs Severe
@@ -277,6 +290,7 @@ namespace AnatomiQ.Core
             CheckConnectivity();
             CheckThermal();
             CheckFramerate();
+            CheckRam();
             CheckInferenceState();
             CheckApiAvailability();
         }
@@ -494,6 +508,18 @@ namespace AnatomiQ.Core
             }
         }
 
+        /// <summary>
+        /// Memory signal → the A.12 metrics snapshot. Pure sample-and-surface: reads the current
+        /// footprint from <see cref="_memoryProbe"/> into <see cref="_ramMegabytes"/> so
+        /// <see cref="Metrics"/> can report MB vs the A.4 1400 MB ceiling. Deliberately does NOT
+        /// reconcile a tier — RAM-driven degradation lands with the deferred mesh/LOD lever, so for
+        /// now this is display-only (decision F, scoped at CORE-002 chunk 5).
+        /// </summary>
+        private void CheckRam()
+        {
+            _ramMegabytes = _memoryProbe.SampleMegabytes();
+        }
+
         /// <summary>TODO (logic phase): Inference Engine model load state → disable dependent features.</summary>
         private void CheckInferenceState() { }
 
@@ -562,8 +588,31 @@ namespace AnatomiQ.Core
         private void ReconcileTier()
         {
             var worst = (PerformanceTier)Math.Max((int)_fpsTier, (int)_thermalTier);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            // A forced tier wins over reconciliation so a real (cool/good-FPS) pass can't un-pin it.
+            if (_debugTierOverride.HasValue)
+            {
+                worst = _debugTierOverride.Value;
+            }
+#endif
             SetTier(worst);
         }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        /// <summary>
+        /// DEV-ONLY (editor + development builds): pin the published <see cref="CurrentTier"/> to a
+        /// forced value, or pass <c>null</c> to return to automatic FPS/thermal reconciliation. A
+        /// chunk-6 aid for watching CORE-002's URP levers engage without real throttling. The forced
+        /// tier is published immediately and survives subsequent monitor passes until cleared.
+        /// Stripped from release builds.
+        /// </summary>
+        /// <param name="tier">The tier to pin, or <c>null</c> to resume automatic reconciliation.</param>
+        public void DebugSetTierOverride(PerformanceTier? tier)
+        {
+            _debugTierOverride = tier;
+            ReconcileTier();
+        }
+#endif
 
         // --- Test seams ------------------------------------------------------------------------
         // internal (not public) so production code can't reach them, but the PlayMode test assembly
@@ -594,6 +643,15 @@ namespace AnatomiQ.Core
             if (provider != null)
             {
                 _thermal = provider;
+            }
+        }
+
+        /// <summary>Test-only: replace the memory source. No-op guard against null.</summary>
+        internal void ConfigureMemoryProbe(IMemoryProbe probe)
+        {
+            if (probe != null)
+            {
+                _memoryProbe = probe;
             }
         }
 

@@ -1,10 +1,10 @@
 # ninja log v5
-15	1786	8037676945225466	GameActivity/CMakeFiles/game.dir/UGAEntry.cpp.o	809fd666596b1dd4
-8	1797	8037676945245927	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	31514971b1159eee
-30	1799	8037676945245927	GameActivity/CMakeFiles/game.dir/UGAInputKeyEvent.cpp.o	6719a856f6a9a172
-50	1801	8037676945456478	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	5c61e351f18c4a5d
-22	1834	8037676945840492	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	ef0698a3380de041
-40	1915	8037676946617203	GameActivity/CMakeFiles/game.dir/UGAInput.cpp.o	f7456f820f6ece7d
-1	1980	8037676947227607	GameActivity/CMakeFiles/game.dir/UGAApplication.cpp.o	18331e0e5f9238e7
-59	2062	8037676948021406	GameActivity/CMakeFiles/game.dir/UGASoftKeyboard.cpp.o	460e94f19b80653d
-2062	2353	8037676950858665	C:/Users/user/Desktop/AnatomiQ/anatomiq/anatomiq-git-scaffold/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/Debug/1s3w361h/obj/arm64-v8a/libgame.so	e77a9ccb35efc338
+20	1300	8039807376124334	GameActivity/CMakeFiles/game.dir/UGAInputKeyEvent.cpp.o	6719a856f6a9a172
+0	1313	8039807376194959	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	31514971b1159eee
+44	1314	8039807376194959	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	5c61e351f18c4a5d
+26	1316	8039807376241079	GameActivity/CMakeFiles/game.dir/UGAEntry.cpp.o	809fd666596b1dd4
+6	1339	8039807376491963	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	ef0698a3380de041
+31	1409	8039807377261340	GameActivity/CMakeFiles/game.dir/UGAInput.cpp.o	f7456f820f6ece7d
+13	1429	8039807377472062	GameActivity/CMakeFiles/game.dir/UGAApplication.cpp.o	18331e0e5f9238e7
+36	1670	8039807379844564	GameActivity/CMakeFiles/game.dir/UGASoftKeyboard.cpp.o	460e94f19b80653d
+1670	1800	8039807381149327	C:/Users/user/Desktop/AnatomiQ/anatomiq/anatomiq-git-scaffold/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/Debug/1s3w361h/obj/arm64-v8a/libgame.so	e77a9ccb35efc338

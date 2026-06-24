@@ -16,7 +16,7 @@ Track each feature here. Only mark ✅ when tested on physical device (Poco X5 P
 | CORE-007 | Fallback & State Manager | ✅ Device-verified via CORE-001 — thermal provider live on Poco (ADPF, `Temp` real not −1); FPS calibration fixed (threshold = fraction of target; device caps AR at 30fps); connectivity moved to its own axis (OFFLINE_MODE removed from AppState); `CheckArTracking` now live (pulls `IArTrackingProvider`); API/inference still documented stubs; 20 PlayMode + 5 EditMode green | 2026-06-23 |
 | CORE-008 | Data Layer & ScriptableObjects | 🧪 Built — service + importer + §9 validator + Phase 1 content (32 EditMode + 5 PlayMode green); not device-tested | 2026-06-19 |
 | CORE-001 | AR Session Manager | ✅ Device-verified on Poco — session→tracking→`AppState` promotion (`AR_VIEWER_MODE`→`AR_ACTIVE`), camera passthrough rendering, `IArTrackingProvider` pull into CORE-007; camera/launcher/Gradle/AP all resolved on device; 61 tests green (37 EditMode + 24 PlayMode) | 2026-06-23 |
-| CORE-002 | 3D Body Model Renderer | ⬜ Not started | — |
+| CORE-002 | 3D Body Model Renderer | ✅ Device-verified on Poco — colored organs + custom URP Fresnel ghost shell render cleanly over the live camera feed (no muddying, organs read through); A.12 overlay live (real RAM via Profiler, FPS ~29.9 at the ARCore 30 cap, thermal 0.00, tier Nominal); tier→URP levers confirmed engaging on device via a dev tier-forcer (render scale 0.9→0.75 softening); +4 PlayMode this session (RAM, 2× overlay, tier-override), full suite green; committed + pushed | 2026-06-24 |
 | CORE-003 | Layer Toggle System | ⬜ Not started | — |
 | CORE-004 | Organ Selection & Highlight | ⬜ Not started | — |
 | CORE-006 | AI Orchestrator | ⬜ Not started | — |
@@ -563,6 +563,59 @@ Track each feature here. Only mark ✅ when tested on physical device (Poco X5 P
 **Reason:** Without the explicit activity the APK installed with no launcher icon ("No activity with MAIN/LAUNCHER"); GameActivity then requires an AppCompat-derived theme (`UnityThemeSelector` crashes with "You need to use a Theme.AppCompat theme").
 **Note:** Keep this manifest to launcher + permissions only — never re-add ARCore meta-data/feature (the plug-in owns those).
 
+---
+
+### [EXECUTION — Asset Prep] Demo-scoped Blender pipeline: 4 steps, not the doc's 8
+
+**Decision:** For the 15-min supervisor demo, ran a reduced asset pipeline — (1) isolate body shell + the 8 meshes the T2D cascade touches, (2) decimate, (3) group into `AQ_` collections, (4) glTF export into Unity `Models/`. LOD generation, FMA tagging, and material baking from the doc's 8-step pipeline deferred to the academic build.
+**Reason:** 8 low-poly meshes run fine on the Poco without LODs; the demo only needs the T2 Diabetes cascade, not the full 25-node set. Supervisor is non-medical → no medical-reviewer gate for the demo (R1 still open for the academic build).
+**Scope (8 meshes):** body shell, pancreas, kidneys (both, fused into one), heart, eye/retina, coronary vessels, lower-limb nerves. Blood glucose = physiological state, no mesh (label only). Glomerulus + systemic microvasculature have NO Z-Anatomy mesh — deferred as label/primitive stand-ins.
+**Blender version:** 4.2 LTS — NOT 4.5+. The Z-Anatomy `Startup.blend` (~600 MB) breaks on 4.5. Source CC BY-SA → attribution owed in credits (already in repo LICENSE, R8).
+
+---
+
+### [EXECUTION — Asset Prep] Z-Anatomy mesh structure: fragmented meshes + curves + label objects
+
+**Discovery:** Z-Anatomy organs are not single meshes. Each is a `.g` group mixing solid meshes (triangle icon), curve objects (vessels/nerves are CURVES, not meshes), and text-label annotation objects (`.t` / `.j` suffixes). The `.g` itself is an empty/group.
+**Cleanup recipe (per organ):** outliner right-click group → Select Hierarchy → Local View (`/`) → Select → Select All by Type → Mesh (drops labels/curves) → left-click one mesh to make it ACTIVE (this is what un-greys Join) → Ctrl+J → rename `AQ_*` → M into the AQ_ collection → delete leftover label/curve children in outliner.
+**Curve gotcha:** vessels and nerves are CURVE objects — Ctrl+J can't fuse curves and they don't export to glTF as geometry. Must run Object → Convert → Mesh FIRST, then join. `.g` empties are skipped by Convert (safe — verified). Label-to-3D-text trap: if a `.t` label gets converted+joined by accident, delete the text island in Edit Mode (Tab → `3` face-select → hover label → `L` → `X` → Faces).
+
+---
+
+### [EXECUTION — Asset Prep] Per-mesh decimation ratios (~498k → ~110k tris, −78%)
+
+**Decision:** Per-mesh Decimate (Collapse) ratios via Blender Python script, not one blanket value. Pancreas/Kidney kept at 1.0 (already ~5k each). Eye 0.30, Heart 0.30, BodyShell 0.40, Coronary 0.20, Nerves 0.10.
+**Reason:** converted curve-tubes (coronary, nerves) carry massive redundant ring geometry — nerves were 228k, decimated to ~23k with no visible change at AR scale. Balanced ~110k total fits the Poco (778G) comfortably alongside camera feed + inference (well under the doc's 1M polygon budget).
+
+---
+
+### [EXECUTION — Asset Prep] Remove (don't apply) leftover Subdivision modifiers before export
+
+**Bug:** after decimating, Heart and Eye still carried a Z-Anatomy **Subdivision** modifier. The poly-count script reads the BASE mesh, but glTF export bakes the subdivided result — would have silently 4–16× the count past budget ("Applied modifier was not first" warning was the tell).
+**Fix:** REMOVE the subsurf modifier (script), don't apply it — applying re-inflates. After removal, base counts held (Heart 18,840 / Eye 15,196).
+**Forward rule:** after decimate, verify every export mesh reports zero leftover modifiers before exporting.
+
+---
+
+### [EXECUTION — Asset Prep] glTF export crashes on Z-Anatomy materials → export with materials='NONE'
+
+**Bug:** `export_scene.gltf(... export_materials='EXPORT')` crashes — `IndexError: list index out of range` in `gltf2_blender_search_node_tree.py`. Cause: a malformed socket in a Z-Anatomy material node-group the glTF material exporter can't parse.
+**Fix:** export with `export_materials='NONE'`. Geometry exports clean. Materials don't carry usefully to Unity anyway — URP materials get assigned in CORE-002 (translucent body shell + colored organs). The grey-in-Blender / magenta-in-Unity look is just "no material," expected.
+
+---
+
+### [EXECUTION — Asset Prep] glTFast required for .glb import in Unity 6 (not native)
+
+**Discovery:** Unity 6.3 does NOT import `.glb` natively — files show as "Default Asset" with no model import settings. Install `com.unity.cloud.gltfast` (Package Manager → + → **Install package by name** — the Registry browse-search does NOT find it by ID). Package name web-verified current (June 2026). After install, glTFast auto-registers as the `.glb`/`.gltf` importer and re-imports files as proper models (with a default glTF material, so they render grey not magenta).
+
+---
+
+### [EXECUTION — Asset Prep] Single-file export — multi-file split broke alignment
+
+**Bug:** exporting four separate `.glb`s (Body / Organs / Vessels / Nerves) imported with mismatched origins — glTFast distributed each file's baked world-offset differently across container vs child transforms, so the four pieces landed in different places. Zeroing container transforms made it WORSE (threw away the offsets holding alignment).
+**Fix:** re-export ALL eight meshes as ONE `AnatomiQ_Full.glb` (select all AQ_ meshes, single `use_selection=True` export). One file preserves the whole relative layout; drop it in at origin and everything assembles (organs in torso, vessels on heart, nerves in legs) with no per-mesh nudging.
+**Forward rule:** for co-located multi-mesh sets, export as a single glb. Zero only the single top parent if you need it at origin — never zero children/sub-containers.
+
 ## Bugs & Fixes
 
 *Log every significant bug here — what it was, what caused it, how it was fixed. Format: Feature → Symptom → Cause → Fix.*
@@ -715,6 +768,59 @@ Track each feature here. Only mark ✅ when tested on physical device (Poco X5 P
 
 ---
 
+### [EXECUTION — CORE-002] 3D Body Model Renderer — chunks 1–4 (renderer, materials, ghost shell, tier consumer)
+
+**Decision A — minimal interface.** `IBodyModelRenderer` exposes only `ModelRoot` + `IsModelReady`. The show/hide/recolor/highlight organ API in the spec is deferred until CORE-004 / ATLAS-001 actually consume it, so the renderer never grows an API surface with no caller.
+**Decision B — organ materials owned at runtime, not editor-baked.** A serialized name-token → material map applied in `Awake`, re-finding meshes by name each run. Chosen over editor-baked `sharedMaterial`s because a glTFast re-import of the `.glb` wipes baked assignments; the runtime map is re-import-resilient.
+**Decision C — ghost shell = custom URP Fresnel shader.** `AnatomiQ/GhostShell`, unlit/transparent, `ZWrite Off` + `ZTest LEqual` + `Cull Back`, alpha driven by Fresnel so it's near-invisible face-on and rims only at the silhouette. Chosen over flat URP-Lit-transparent (tints the whole feed grey) and over Shader Graph (graph assets don't transfer cleanly as text). Do NOT rely on glTFast's URP transmission for translucency — it needs Opaque Texture ON, which the A.11 mobile budget forbids.
+**Decision D — model scene-embedded under a BodyRoot owned by BodyRenderer.** No runtime glTFast load; the imported hierarchy stays in the scene. BodyRoot is a clean, reparentable transform so ATLAS-003 can anchor it later without fighting baked offsets.
+**Decision E — tier levers cache + restore the URP asset.** `renderScale`/`shadowDistance` are mutated on the active `UniversalRenderPipelineAsset` (a project asset), so originals are cached on Awake and restored on OnDestroy — otherwise play-mode mutations persist into the asset. If render scale ever looks stuck at 0.75 after a session, a teardown didn't run (editor crash mid-play); reset to 0.9. Mapping: Nominal 0.90/15m/post-on, Reduced 0.85/15m/post-off, Aggressive 0.75/8m/post-off, Critical 0.75/0m/post-off. No LOD-mesh lever yet (model has no LODGroups).
+
+**Boundary held throughout:** CORE-002 renders the body whole, assigns materials, responds to tier. It does NOT do layer toggling (CORE-003) or organ selection/highlight (CORE-004), and exposes no organ-manipulation API. AR anchoring stays ATLAS-003 (BodyRoot at origin).
+
+**Fact established — AnatomiQ_Full = 7 child meshes, not 8:** `AQ_Heart`, `AQ_Coronary`, `AQ_Pancreas`, `AQ_Kidney` (L+R fused), `AQ_Eye`, `AQ_Nerves_Leg`, `AQ_BodyShell`. The "8 meshes" in earlier notes counted kidneys pre-fusion. This 7-name list seeds CORE-004's organ-ID → mesh-name map.
+
+**Test-seam pattern (reused):** `BodyRenderer` follows CORE-007's `internal Configure*ForTest` + `[assembly: InternalsVisibleTo("AnatomiQ.Tests.PlayMode")]` pattern (via `AnatomiQ.Anatomy.AssemblyInfo.cs`), guarded with `#if UNITY_INCLUDE_TESTS`. Tests build the host GameObject INACTIVE, inject wiring, then `SetActive(true)` so `Awake` runs against populated fields.
+
+---
+
+### [EXECUTION — CORE-002] Chunk 5 — RAM metric populated + A.12 debug overlay
+
+**Decision F realized — RAM sampled in CORE-007's monitor loop.** `PerformanceMetrics.RamMegabytes` is now populated via a new `IMemoryProbe` seam (real: `UnityMemoryProbe`) added alongside CORE-007's other signal seams, read each `MonitorPass` via `CheckRam`. It is **display-only** — it does NOT drive a tier (RAM-driven degradation waits on the deferred mesh/LOD lever). The figure is a **Unity-heap proxy** (`Profiler.GetTotalAllocatedMemoryLong`): it EXCLUDES ARCore's native ~100–150 MB and graphics-driver memory, so it reads LOWER than Android's reported app memory (on device ~120 MB) — not a leak. Memory Profiler methods need no Development Build, so it reads on a release APK.
+**Decision G realized — A.12 overlay built in `AnatomiQ.UI`.** Toggleable on-screen FPS / frame-time / RAM / thermal / tier, sourcing everything from `IFallbackManager.Metrics` so **UI never references Anatomy** (pillar isolation holds). Drawcalls/triangles are editor-only (`UnityStats`, `#if UNITY_EDITOR`); device shows the available subset. GPU-mem / inference / API-queue / battery-temp render as `n/a` placeholders (no source yet) so the layout matches the full A.12 intent. Overlay strings are plain non-localized constants (the dev-tool exception to the day-1 localization rule).
+**Decision H (new) — overlay render tech = UGUI + TMP, throttled.** Chosen over IMGUI specifically to honor the allocation-free `PerformanceMetrics` struct: the overlay refreshes at 4 Hz and writes through a cached `StringBuilder` via TMP's `SetText(StringBuilder)`, so while it's on screen during the load test it adds no per-frame GC against the A.2 budget. Self-contained — builds its own top-most Canvas + corner "PERF" toggle + panel in code (and an EventSystem if the scene lacks one), so the only scene step is dropping the component and assigning the ServiceRegistry. Toggle: corner button on device, F1 in editor.
+
+---
+
+### [EXECUTION — CORE-002] Chunk 6 — device gate on Poco + dev tier-forcer
+
+**Device gate PASSED (2026-06-24).** On hardware: (1) the Fresnel ghost shell renders cleanly over the live camera feed — near-invisible face-on, faint silhouette rim, organs (heart, fused kidneys/adrenals, leg nerves) read clearly through it, surrounding feed untouched (the deferred "no muddying" check, now confirmed); (2) the A.12 overlay reads live — RAM real (~120/1400 MB), FPS 29.9 / frame 33.4 ms (both shown red — correctly at the ARCore 30 fps cap, NOT a fault), thermal 0.00, tier Nominal, draws/tris `n/a (device)`; (3) tier→URP levers visibly engage (image softens as render scale drops 0.9→0.75). Temporary stopgap for the test: `BodyRoot` nudged ~+2 m forward so you're not standing inside the model — a scene transform tweak, NOT renderer code; placement stays ATLAS-003's.
+
+**Dev tier-forcer (new, gated `#if UNITY_EDITOR || DEVELOPMENT_BUILD`).** Real thermal demotion was NOT exercised — the Poco stayed cool on this scene (the thermal plumbing is already proven live from CORE-001). To verify the lever path without real heat: added `FallbackManager.DebugSetTierOverride(PerformanceTier?)` — pins the published tier (honored inside `ReconcileTier`, survives the monitor loop until cleared) — and a Nom/Red/Agg/Crit/Auto button strip in the overlay that drives it. This exercises the REAL publish→subscribe→lever chain (CORE-007 publishes → BodyRenderer's subscriber applies levers), not a poked-in value. Both strip from release. (Same temporary-verification-aid spirit as CORE-001's `ARStatusLogger`; removable once trusted.)
+
+---
+
+### [2026-06-24] — CORE-002 — Monitor coroutine runs one MonitorPass synchronously inside OnEnable
+
+**Symptom:** A new RAM test asserting `Metrics.RamMegabytes == -1` *before* the first explicit `TickForTest()` failed — the field already held a real value.
+**Cause:** `StartCoroutine` executes a coroutine up to its first `yield` synchronously, and `MonitorLoop` calls `MonitorPass()` BEFORE its first `WaitForSeconds`. So one full pass runs inside `OnEnable` (during `SetActive(true)` in the test harness), and `CheckRam`'s default `UnityMemoryProbe` is LIVE — so RAM is populated before the test's first line. Thermal keeps its `-1` only because its default (`NullThermalProvider`) is inert.
+**Fix:** dropped the racy pre-tick assertion; keep the post-tick equality (inject fake probe → tick → assert value).
+**Pattern:** in a CORE-007 test, any metric backed by a *live* default provider is already populated before your first assertion. Only fields defaulting to an inert provider retain their sentinel.
+
+---
+
+### [2026-06-24] — CORE-002 — TMP `enableWordWrapping` is obsolete in Unity 6; use `textWrappingMode`
+
+**Issue:** `TMP_Text.enableWordWrapping` is `[Obsolete]` in the Unity 6 TextMeshPro. Use `textWrappingMode = TextWrappingModes.NoWrap` instead (web-verified against the 6.3 TMP API). The old property still compiles but warns; the new one is clean.
+
+---
+
+### [2026-06-24] — CORE-002 — AnatomiQ.UI assembly references for the overlay
+
+**Added to `AnatomiQ.UI.asmdef`:** `Unity.TextMeshPro`, `UnityEngine.UI`, `Unity.InputSystem` (TMP text, UGUI canvas/button, the editor F1 key + the auto-EventSystem's `InputSystemUIInputModule`). New `AnatomiQ.UI.AssemblyInfo.cs` adds `[assembly: InternalsVisibleTo("AnatomiQ.Tests.PlayMode")]` for the overlay's test seams (`ConfigureServicesForTest` / `ComposeMetricsText`, both `#if UNITY_INCLUDE_TESTS`). The PlayMode test asmdef needed an explicit `AnatomiQ.UI` reference (same CS0234 class as the earlier `AnatomiQ.Anatomy` one). Safe way to add the refs: the asmdef Inspector's reference picker (lists only real assembly names — no typos).
+
+---
+
 ## Performance Notes
 
 *Log any performance discoveries, optimizations made, or device-specific behavior observed on the Poco X5 Pro.*
@@ -733,6 +839,11 @@ Track each feature here. Only mark ✅ when tested on physical device (Poco X5 P
 - `Cluster Info = Big/Medium/Little 0/0/0` and `CPU=-1/-1 GPU=-1/-1` performance levels — ADPF on this device doesn't expose per-cluster core counts or boost levels; only thermal + bottleneck + frametimes are populated. Don't rely on cluster/boost fields on the Poco.
 
 *(Loaded-scene performance notes continue at CORE-002 / on-device testing.)*
+
+**[2026-06-24 · CORE-002 · Poco X5 Pro] First loaded-scene measurements (`AnatomiQ_Full` ~110k tris + Fresnel ghost shell, AR passthrough):**
+- Held **FPS 29.9 / frame 33.4 ms** — the same ARCore 30-fps cap as the empty scene; the ~110k-tri body + transparent shell did NOT push it below the cap. Tier stayed **Nominal**, thermal **0.00** over a several-minute hold — the Poco does not thermally throttle on this load.
+- RAM (Unity heap, `GetTotalAllocatedMemoryLong`) ~**120 MB** of the 1400 MB ceiling — comfortable. Reads lower than Android's app memory (excludes ARCore native + gfx driver) — expected, not a leak.
+- Tier→URP levers confirmed working via the dev tier-forcer: forcing Critical visibly softens the image (render scale 0.9→0.75). Real thermal-DRIVEN demotion remains unseen — needs heavier/sustained load (CORE-005 cascade) to actually heat the Adreno.
 
 ---
 
@@ -824,10 +935,14 @@ Track each feature here. Only mark ✅ when tested on physical device (Poco X5 P
 | Localization beyond English | Externalize strings from day 1, but ship English only | Post-academic |
 | Final logo, app icon, full visual identity | Iterate against real screens | Mid-Phase 3 or commission later |
 | Content + test-fixture JSON packing into player builds as TextAssets | Runtime loads `.asset`s via the manifest, not JSON; harmless few-KB until then | When build packaging is wired (exclude `Content/` + `Tests/.../Fixtures/` from the build) |
-| CORE-007 `OnPerformanceTierChanged` consumer: translate tier → URP levers + show thermal strings + build the A.12 overlay widget | No renderer/UI host exists yet; CORE-007 publishes the signal + the `PerformanceMetrics` contract now | CORE-002 (3D Body Model Renderer) / UI |
+| ~~CORE-007 `OnPerformanceTierChanged` consumer: tier → URP levers + A.12 overlay~~ — 🟡 **PARTIAL/DONE** | tier→URP levers ✅ (chunk 4) + A.12 overlay ✅ (chunk 5), both device-verified 2026-06-24 | ✅ done — **except** the thermal user-warning string display (UIStrings `ui.system.thermal.warning/.critical` shown at Aggressive/Critical) is still pending — a small UI consumer; do at CORE-003/UI |
 | CORE-007 signal stubs `CheckApiAvailability` / `CheckInferenceState` | Their sources don't exist yet; left as documented stubs (`CheckArTracking` now LIVE via CORE-001's `IArTrackingProvider`) | CORE-006 / on-device inference respectively |
-| CORE-007 thermal behavior under real throttling load (sustained AR + cascade) | Provider now live on device, but device stays cool on an empty scene — needs real GPU load to exercise demotion | CORE-002+ (once geometry/animation load exists) |
+| CORE-007 thermal behavior under real throttling load (sustained AR + cascade) | Provider live on device, but the Poco stays cool under CORE-002's load (110k tris + shell held Nominal/0.00) | 🟡 Demotion LEVERS verified on device via the dev tier-forcer (CORE-002, 2026-06-24); real-HEAT-driven demotion still unobserved — exercise under CORE-005 cascade load |
 | Remove temporary `ARStatusLogger` device probe | Used for CORE-001 device verification; delete the script + the AppCore component | Immediately, now CORE-001 is verified |
+| Mesh LOD generation + FMA tagging | 8 low-poly meshes run fine on Poco without them for the demo | Academic build |
+| ~~Material baking from Z-Anatomy~~ ✅ DONE | Exporter crashes on their node-groups; URP materials assigned in Unity instead | ✅ CORE-002 (2026-06-24) — runtime name-token map assigns colored organ materials + the `AnatomiQ/GhostShell` Fresnel shell |
+| Glomerulus + systemic microvasculature meshes | No Z-Anatomy mesh exists; demo uses label/primitive stand-ins | Academic build |
+| Full 25-node mesh set + other-disease meshes (Hypertension, CKD) | Demo only needs the T2D cascade | Academic build |
 
 ---
 
@@ -863,10 +978,18 @@ Track each feature here. Only mark ✅ when tested on physical device (Poco X5 P
 | URP AR camera passthrough setup | ✅ RESOLVED (CORE-001) | Active renderer needs BOTH AR Background Renderer Feature (draw pass) AND AR Command Buffer Support feature; background feature was the missing piece |
 | Adaptive Performance provider on non-Samsung device | ✅ RESOLVED (CORE-001) | Android Provider (ADPF) selected in Providers list; works on Poco (API 34). Samsung provider is Samsung-only; Basic is a stub |
 | Android entry point / launcher activity / theme | ✅ RESOLVED (CORE-001) | GameActivity entry point; custom manifest declares `UnityPlayerGameActivity` MAIN/LAUNCHER with `@style/BaseUnityGameActivityTheme` (AppCompat) |
+| Z-Anatomy Blender compatibility | ✅ RESOLVED (Asset Prep) | 4.2 LTS only — `Startup.blend` breaks on 4.5+ |
+| T2D demo mesh set | ✅ RESOLVED (Asset Prep) | 8 meshes isolated, decimated ~110k, exported, assembled at origin in `Models/AnatomiQ_Full.glb` |
+| .glb import in Unity 6 | ✅ RESOLVED (Asset Prep) | glTFast (`com.unity.cloud.gltfast`) required; not native |
+| Z-Anatomy material → glTF export | ✅ RESOLVED (Asset Prep) | Exporter crashes on their node-groups; export `materials='NONE'`, assign URP materials in CORE-002 |
 
 ---
 
-*Last updated: CORE-001 (AR Session Manager) ✅ DEVICE-VERIFIED on Poco X5 Pro — full success path on hardware: session init → `Tracking` → `AppState` promotes `AR_VIEWER_MODE`→`AR_ACTIVE` (change-only event) → camera passthrough renders → tier holds Nominal at 29.9fps, thermal live (`Temp=0.00`). `ARSessionManager` implements `IArTrackingProvider` (pull model into CORE-007); connectivity split to its own axis (OFFLINE_MODE removed from AppState); 61 tests green (37 EditMode + 24 PlayMode). Device bring-up resolved end-to-end: ARCore Gradle namespace clash (embed `com.unity.xr.arcore` + patch `unityandroidpermissions.aar` — forked package, re-patch on update); GameActivity launcher + `BaseUnityGameActivityTheme`; MIUI Install-via-USB; URP **AR Background Renderer Feature** (the camera-draw pass — was the solid-color-screen cause); FPS threshold = fraction of target with AR target **30** (ARCore caps render at 30, GPU ~3.6ms/CPU ~5ms headroom proves it's a cap not a wall); Adaptive Performance **provider selection** (ADPF Android — the two-toggle gotcha) → thermal now live. TODO: delete the temporary `ARStatusLogger` probe + its AppCore component. Next per build order: CORE-002 (3D Body Model Renderer) — first real GPU load, will exercise the thermal/tier demotion path and the tier→URP-lever consumer.*
+*Last updated: CORE-002 (3D Body Model Renderer) ✅ DONE + DEVICE-VERIFIED on Poco X5 Pro (2026-06-24) — chunks 1–6 complete. Colored organs + custom URP Fresnel ghost shell (`AnatomiQ/GhostShell`) render cleanly over the live camera feed (no muddying; organs read through); materials owned at runtime by `BodyRenderer` via a re-import-resilient name-token map; model scene-embedded under a reparentable `BodyRoot` (anchoring left to ATLAS-003). Tier→URP-lever consumer live (render scale/shadow/post mapping Nominal→Critical, cache+restore on the active URP asset). Chunk 5: `PerformanceMetrics.RamMegabytes` populated via a new `IMemoryProbe` seam in CORE-007's monitor loop (Unity-heap proxy via `GetTotalAllocatedMemoryLong`, display-only — no RAM→tier demotion yet) + the A.12 debug overlay in `AnatomiQ.UI` (UGUI+TMP, 4 Hz, allocation-free `SetText(StringBuilder)`, sources only `IFallbackManager.Metrics` so UI never references Anatomy; non-localized dev strings). Chunk 6 device gate passed: ghost-over-feed clean, overlay live (RAM ~120/1400 MB, FPS 29.9 at the ARCore 30 cap, thermal 0.00, tier Nominal), tier→URP levers visibly engaging via a dev-only tier-forcer (`DebugSetTierOverride` + overlay button strip, gated to editor/development builds) — real thermal demotion NOT exercised (Poco stays cool; plumbing already proven at CORE-001). +4 PlayMode this session (RAM, 2× overlay, tier-override), full suite green; committed + pushed. Interface kept minimal (`ModelRoot` + `IsModelReady`); 7-mesh fact established (kidneys fused). Open: thermal user-warning STRING display (small UI consumer) still pending; real-heat tier demotion to exercise at CORE-005; the `BodyRoot` +2 m nudge is a temporary test stopgap to undo at ATLAS-003. Next per build order: CORE-003 (Layer Toggle System).*
+
+*Prior — Asset Prep (Blender → Unity, T2D demo mesh set) ✅ DONE — demo-scoped 4-step pipeline (isolate → decimate → group → export) on Z-Anatomy in Blender 4.2 LTS. 8 meshes (body shell, pancreas, both kidneys fused, heart, eye/retina, coronary vessels, leg nerves) isolated via the Select-Hierarchy → Local-View → Select-by-Type-Mesh → Convert(curves)→Mesh → Join → M-to-AQ-collection recipe; decimated per-mesh (~498k→~110k tris, −78%) via bpy script; leftover Subdivision modifiers REMOVED (not applied) on Heart/Eye; exported `materials='NONE'` to dodge the Z-Anatomy node-group exporter crash (IndexError). Unity 6 needs glTFast (`com.unity.cloud.gltfast`, web-verified) — `.glb` not native. Four-file export broke alignment (glTFast scatters baked offsets); fixed by single `AnatomiQ_Full.glb` — all 8 meshes assemble at origin, organs nested in torso. Sitting in `Models/`, grey (no materials). Next: CORE-002 (3D Body Model Renderer) — wire into renderer, assign URP materials (translucent body shell + colored organs), per build order.*
+
+*Prior — CORE-001 (AR Session Manager) ✅ DEVICE-VERIFIED on Poco X5 Pro — full success path on hardware: session init → `Tracking` → `AppState` promotes `AR_VIEWER_MODE`→`AR_ACTIVE` (change-only event) → camera passthrough renders → tier holds Nominal at 29.9fps, thermal live (`Temp=0.00`). `ARSessionManager` implements `IArTrackingProvider` (pull model into CORE-007); connectivity split to its own axis (OFFLINE_MODE removed from AppState); 61 tests green (37 EditMode + 24 PlayMode). Device bring-up resolved end-to-end: ARCore Gradle namespace clash (embed `com.unity.xr.arcore` + patch `unityandroidpermissions.aar` — forked package, re-patch on update); GameActivity launcher + `BaseUnityGameActivityTheme`; MIUI Install-via-USB; URP **AR Background Renderer Feature** (the camera-draw pass — was the solid-color-screen cause); FPS threshold = fraction of target with AR target **30** (ARCore caps render at 30, GPU ~3.6ms/CPU ~5ms headroom proves it's a cap not a wall); Adaptive Performance **provider selection** (ADPF Android — the two-toggle gotcha) → thermal now live. TODO: delete the temporary `ARStatusLogger` probe + its AppCore component. Next per build order: CORE-002 (3D Body Model Renderer) — first real GPU load, will exercise the thermal/tier demotion path and the tier→URP-lever consumer.*
 
 *Prior — CORE-007 (Fallback & State Manager) LOGIC PHASE DONE — two-axis model (`AppState` + new `PerformanceTier`); live signals `CheckConnectivity` (debounced → OFFLINE_MODE), `CheckFramerate` (per-frame ring buffer, 1s eval, 30/40 hysteresis), `CheckThermal` (Adaptive Performance mapping, asymmetric heat-fast/cool-slow hysteresis); `max(fps,thermal)` reconciliation; provider seams (`IConnectivityProvider`/`IFrameClock`/`IThermalProvider`) + `InternalsVisibleTo` for tests; thermal localization keys (code) + values (UIStrings via Editor tool); 14 PlayMode + 5 EditMode green; committed + pushed. AR/API/inference checks left as documented stubs. Deferred to CORE-001: real thermal provider enablement (`AdaptivePerformanceThermalProvider` + AP Android subsystem + define). Deferred to CORE-002: tier→URP-lever consumer, thermal-string display, A.12 overlay widget, RAM metric. Next: CORE-001 (AR Session Manager) — also fixes the deferred ARCore release-APK Gradle namespace clash and enables the thermal provider on device.*
 

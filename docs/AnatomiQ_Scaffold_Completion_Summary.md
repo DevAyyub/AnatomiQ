@@ -13,10 +13,13 @@
 > Since then, **CORE-008 (Data Layer)**, **CORE-007 (Fallback & State Manager)**, and now
 > **CORE-001 (AR Session Manager)** are all BUILT — and **CORE-001 + CORE-007 are now DEVICE-VERIFIED
 > on the Poco X5 Pro** (full AR session → tracking → state promotion → camera passthrough; thermal +
-> FPS tiers live on hardware). CORE-008 remains editor-green (not device-tested). The scaffold sections
-> below are left as the historical scaffold record; see the **Build order & where to go next** section
-> at the bottom and `bugs_and_decisions.md` for the authoritative current state.
-> **Next feature: CORE-002 (3D Body Model Renderer).**
+> FPS tiers live on hardware). CORE-008 remains editor-green (not device-tested). Separately, the
+> **T2 Diabetes demo asset set is now PREPARED and imported** — 8 Z-Anatomy meshes isolated, decimated
+> (~110k tris total), and assembled at the origin in `Assets/_AnatomiQ/Models/AnatomiQ_Full.glb` (no
+> materials yet). This is the geometry CORE-002 will render. The scaffold sections below are left as the
+> historical scaffold record; see the **Build order & where to go next** section at the bottom and
+> `bugs_and_decisions.md` for the authoritative current state.
+> **Next feature: CORE-002 (3D Body Model Renderer)** — assets are now ready for it.
 
 ---
 
@@ -105,6 +108,29 @@
   to `UIStrings` via an Editor tool. Keys owned by code constants on `FallbackManager`.)*
 - Cascade `narrationFallback` stays in JSON, NOT localization (Build Env C.5).
 
+### Asset Prep — T2 Diabetes demo mesh set (Blender → Unity, 2026-06-23)
+- **Scope (demo, not academic):** the 8 meshes the T2D cascade touches — body shell, pancreas,
+  kidneys (both, fused), heart, eye/retina, coronary vessels, lower-limb nerves. Blood glucose is a
+  physiological state (label, no mesh). Glomerulus + systemic microvasculature have no Z-Anatomy mesh →
+  label/primitive stand-ins, deferred. Full 25-node set + HTN/CKD meshes deferred to the academic build.
+- **Pipeline (demo-scoped 4 steps, not the doc's 8):** isolate → decimate → group into `AQ_` collections
+  → glTF export. LOD generation, FMA tagging, and material baking deferred (8 low-poly meshes run fine on
+  the Poco without them).
+- **Source:** Z-Anatomy `Startup.blend` in **Blender 4.2 LTS** (NOT 4.5+ — the file breaks on 4.5).
+  CC BY-SA → attribution owed in credits (already in repo LICENSE).
+- **Decimation:** per-mesh Decimate (Collapse) via bpy script — Pancreas/Kidney kept 1.0; Eye/Heart 0.30,
+  BodyShell 0.40, Coronary 0.20, Nerves 0.10. **~498k → ~110k tris (−78%)**, well under the 1M budget.
+  Leftover Z-Anatomy **Subdivision** modifiers on Heart/Eye were REMOVED (not applied — applying re-inflates).
+- **Export:** single `AnatomiQ_Full.glb` with all 8 meshes (one file preserves shared world positions;
+  four separate files imported mis-aligned). Exported `materials='NONE'` — the glTF material exporter
+  crashes on Z-Anatomy node-groups (`IndexError`). Y-up, modifiers applied.
+- **Unity import:** Unity 6 does NOT read `.glb` natively — **glTFast (`com.unity.cloud.gltfast`)** required
+  (Package Manager → Install package by name). Imports as a model with a default glTF material → renders
+  grey. Sits assembled at origin in `Models/`; URP materials (translucent body shell + colored organs)
+  assigned in CORE-002.
+- **Repo note:** `AnatomiQ_Full.glb` is a binary → must go through Git LFS (`.gitattributes` already tracks
+  `.glb`; `git check-attr` before first push, `git lfs ls-files` after).
+
 ---
 
 ## Verified package versions (web-checked June 2026, locked via committed packages-lock.json)
@@ -116,6 +142,7 @@
 | Newtonsoft (`com.unity.nuget.newtonsoft-json`) | **3.2.2** | Auto-referenced (all asmdefs) |
 | Localization (`com.unity.localization`) | **1.5.12** | |
 | Input System | **1.19.0** | From template |
+| glTFast (`com.unity.cloud.gltfast`) | *(added 2026-06-23, Asset Prep)* | Required for `.glb` import — Unity 6 has no native glTF importer. Install via "Install package by name". Re-confirm latest at CORE-002. |
 
 > **⚠️ ARCore package is now FORKED/EMBEDDED (since CORE-001, 2026-06-23).** `com.unity.xr.arcore`
 > was copied from `Library/PackageCache` into `Packages/` and its `Runtime/Android/unityandroidpermissions.aar`
@@ -170,13 +197,16 @@
    else→AR_VIEWER_MODE). Connectivity was also split to its own axis (OFFLINE_MODE removed from
    AppState). Confirmed on device. Thermal/perf still does NOT drive AppState (orthogonal `PerformanceTier`).
 
-5. **CORE-007 tier consumer + thermal-string display + A.12 overlay → at CORE-002.** *(STILL OPEN)*
-   CORE-007 publishes `OnPerformanceTierChanged` and the `PerformanceMetrics` snapshot, plus defines
-   the thermal-string keys (`ui.system.thermal.warning/.critical`, values authored in `UIStrings`).
-   No consumer exists yet: CORE-002's renderer translates tier → URP levers, a UI layer shows the
-   strings at Aggressive/Critical, and the on-screen A.12 debug overlay is built then. RAM field in
-   `PerformanceMetrics` is also populated at CORE-002. **CORE-002 is also where the now-live thermal
-   axis first gets real GPU load to exercise demotion.**
+5. **CORE-007 tier consumer + thermal-string display + A.12 overlay → at CORE-002.** *(MOSTLY RESOLVED at CORE-002, 2026-06-24)*
+   ✅ **Tier→URP-lever consumer** live in `BodyRenderer` (render scale / shadow distance / post-processing,
+   cache+restore on the active URP asset). ✅ **A.12 debug overlay** built in `AnatomiQ.UI` (UGUI+TMP, 4 Hz,
+   sources only `IFallbackManager.Metrics`). ✅ **`PerformanceMetrics.RamMegabytes`** populated via a new
+   `IMemoryProbe` seam in CORE-007's monitor loop (Unity-heap proxy, display-only). ✅ **Tier→levers
+   confirmed on device** via a dev-only tier-forcer (`DebugSetTierOverride` + overlay buttons, gated to
+   editor/dev builds). 🟡 **Still open:** the **thermal user-warning STRING display** (showing the UIStrings
+   `ui.system.thermal.warning/.critical` values at Aggressive/Critical) — a small UI consumer, deferred to
+   CORE-003/UI. 🟡 **Real-HEAT-driven demotion still unseen** — the Poco stays cool under CORE-002's load
+   (110k tris + shell held Nominal/0.00); exercise under CORE-005 cascade load.
 
 6. **CORE-007 `CheckApiAvailability` / `CheckInferenceState` → at CORE-006 / on-device inference.** *(STILL OPEN)*
    Documented stubs; implemented when the AI Orchestrator and on-device inference exist.
@@ -207,11 +237,11 @@
 **CORE → ATLAS → PRISM → CADENCE.** Within CORE:
 CORE-008 → CORE-007 → CORE-001 → CORE-002 → CORE-003 → CORE-004 → CORE-006 → CORE-005.
 
-**Progress (updated 2026-06-23):**
+**Progress (updated 2026-06-24):**
 - **CORE-007** — ✅ DONE + **device-verified** (via CORE-001). Two-axis `AppState` + `PerformanceTier`;
   Connectivity (own axis) / Framerate (fraction-of-target thresholds) / Thermal (ADPF live) all working
   on the Poco; `CheckArTracking` LIVE; API/Inference left as documented stubs; 20 PlayMode + 5 EditMode
-  green; committed + pushed. (Tier→URP-lever consumer still at CORE-002.)
+  green; committed + pushed. (Tier→URP-lever consumer now built — CORE-002.)
 - **CORE-008** — ✅ DONE. Data Layer service + JSON→SO importer + §9 validator + Phase 1 content
   (24 organs, 3 cascades); green; committed + pushed. Not device-tested. Open: medical review of the
   3 cascades (Phase 2 checkpoint); content + test-fixture JSON still packs into player builds as
@@ -222,11 +252,24 @@ CORE-008 → CORE-007 → CORE-001 → CORE-002 → CORE-003 → CORE-004 → CO
   device: ARCore Gradle namespace (embedded fork + AAR patch), GameActivity launcher + AppCompat theme,
   MIUI Install-via-USB, URP AR Background Renderer Feature, FPS calibration, AP provider selection.
   61 tests green; committed + pushed. TODO: delete the `ARStatusLogger` probe (deferred #7).
-- **CORE-002 (3D Body Model Renderer) — ⬅ NEXT.** First feature with real geometry/GPU load, so it's
-  where CORE-007's `OnPerformanceTierChanged` finally gets a consumer (tier → URP render-scale/LOD/cull
-  levers), the thermal axis gets exercised under real load, the thermal UI strings get displayed, the
-  A.12 debug overlay is built, and `PerformanceMetrics.RAM` is populated (deferred #5). Verify current
-  AR Foundation / URP / model-import package versions at the start of that chat (Unity moves fast).
+- **CORE-002 (3D Body Model Renderer) — ✅ DONE + device-verified on Poco (2026-06-24).** Chunks 1–6.
+  `BodyRenderer` self-registers as the single `IBodyModelRenderer` (minimal: `ModelRoot` + `IsModelReady`),
+  owns a reparentable `BodyRoot` (anchoring left to ATLAS-003), assigns colored organ materials + a custom
+  URP Fresnel ghost shell (`AnatomiQ/GhostShell`) via a re-import-resilient runtime name-token map, and
+  consumes CORE-007's tier signal → URP levers (render scale / shadow / post, cache+restore on the active
+  URP asset). Chunk 5 added the RAM metric (`IMemoryProbe` seam in CORE-007's loop, Unity-heap proxy,
+  display-only) and the A.12 debug overlay (`AnatomiQ.UI`, UGUI+TMP, 4 Hz, reads only
+  `IFallbackManager.Metrics`). Chunk 6 device gate passed: ghost shell clean over the live feed (no muddying),
+  overlay live (RAM ~120/1400 MB, FPS 29.9 at the ARCore 30 cap, thermal 0.00, tier Nominal), tier→URP
+  levers visibly engaging via a dev-only tier-forcer (`DebugSetTierOverride` + overlay buttons, gated to
+  editor/dev builds). +4 PlayMode this session (RAM, 2× overlay, tier-override), full suite green; committed
+  + pushed. **Fact:** `AnatomiQ_Full` = **7** child meshes, not 8 (kidneys fused) — seeds CORE-004's
+  organ-ID → mesh-name map. **Open carry-forwards:** thermal user-warning string display (small UI consumer,
+  → CORE-003/UI); real-heat tier demotion (→ CORE-005 cascade load); the `BodyRoot` +2 m test nudge to undo
+  at ATLAS-003.
+- **CORE-003 (Layer Toggle System) — ⬅ NEXT.** Per build order; depends on CORE-002 rendering (now done).
+  New surface needed on `IBodyModelRenderer` (show/hide layers) — the minimal-interface decision (A) means
+  it grows here, with CORE-003 as the first caller. The 7-mesh name list above is the seed.
 
 **Per feature chat:** start a FRESH chat, attach this summary + the latest `bugs_and_decisions.md`,
 name the feature ID, and paste any specific existing file the chat needs to extend (e.g.

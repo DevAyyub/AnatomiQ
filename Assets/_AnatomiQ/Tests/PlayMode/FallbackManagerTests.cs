@@ -602,5 +602,71 @@ namespace AnatomiQ.Tests.PlayMode
             Object.Destroy(fm.gameObject);
             Object.Destroy(registry);
         }
+
+        // ----- Memory → A.12 metrics snapshot (CORE-002 chunk 5) ------------------------------
+
+        // Fake memory source so RAM → Metrics is verifiable without a live Profiler.
+        private sealed class FakeMemoryProbe : IMemoryProbe
+        {
+            public float Megabytes;
+            public float SampleMegabytes() => Megabytes;
+        }
+
+        [UnityTest]
+        public IEnumerator Ram_PopulatedFromProbe_IntoMetrics()
+        {
+            var fm = NewManager(out var registry);
+            yield return null;
+
+            fm.ConfigureConnectivityProvider(new FakeConnectivity { Reachable = true });
+            fm.ConfigureMemoryProbe(new FakeMemoryProbe { Megabytes = 812f });
+
+            // No pristine -1 assertion here: OnEnable's StartCoroutine runs the first MonitorPass
+            // synchronously with the DEFAULT (real) UnityMemoryProbe, so _ramMegabytes already holds
+            // a live reading by now. We inject the fake, drive one explicit pass, and assert the
+            // fake's value flows through Metrics — the behaviour that actually matters.
+            fm.TickForTest();
+
+            Assert.AreEqual(812f, fm.Metrics.RamMegabytes, 1e-4f,
+                "A monitor pass should surface the probe's value through Metrics.RamMegabytes.");
+
+            Object.Destroy(fm.gameObject);
+            Object.Destroy(registry);
+        }
+
+        // ----- Dev tier override (chunk-6 verification aid) -----------------------------------
+        // Present in editor + development builds only; the test assembly compiles in both, so the
+        // reference to DebugSetTierOverride always resolves where this test runs.
+
+        [UnityTest]
+        public IEnumerator DebugTierOverride_PinsPublishedTier_AndSurvivesReconciliation()
+        {
+            var fm = NewManager(out var registry);
+            yield return null;
+
+            // Cool device, good FPS: automatic reconciliation would hold Nominal.
+            fm.ConfigureConnectivityProvider(new FakeConnectivity { Reachable = true });
+            fm.ConfigureThermalProvider(new FakeThermal
+            {
+                Available = true, Level = ThermalWarning.None, Temperature = 0f
+            });
+            fm.PrimeFramerateForTest(60f);
+
+            fm.DebugSetTierOverride(PerformanceTier.Critical);
+            Assert.AreEqual(PerformanceTier.Critical, fm.CurrentTier,
+                "Forcing a tier should publish it immediately.");
+
+            // A full pass with good FPS + cool thermal must NOT un-pin the forced tier.
+            fm.TickForTest();
+            Assert.AreEqual(PerformanceTier.Critical, fm.CurrentTier,
+                "The forced tier must survive reconciliation against the real sub-tiers.");
+
+            fm.DebugSetTierOverride(null);
+            Assert.AreEqual(PerformanceTier.Nominal, fm.CurrentTier,
+                "Clearing the override returns to automatic FPS/thermal reconciliation.");
+
+            Object.Destroy(fm.gameObject);
+            Object.Destroy(registry);
+        }
     }
 }
