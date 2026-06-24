@@ -26,6 +26,7 @@ namespace AnatomiQ.Core
         [System.NonSerialized] private IBodyModelRenderer _bodyRenderer;
         [System.NonSerialized] private IDataLayer _dataLayer;
         [System.NonSerialized] private IArTrackingProvider _arTracking;
+        [System.NonSerialized] private IPlacementProvider _placementProvider;
 
         /// <summary>CORE-007. Null until the FallbackManager registers (first, at startup).</summary>
         public IFallbackManager FallbackManager => _fallbackManager;
@@ -45,6 +46,14 @@ namespace AnatomiQ.Core
         /// treats a null provider as <see cref="ArTrackingStatus.Unavailable"/> → AR_VIEWER_MODE.
         /// </summary>
         public IArTrackingProvider ArTrackingProvider => _arTracking;
+
+        /// <summary>
+        /// ATLAS-003. Null until the placement controller registers, and null again after the AR scene
+        /// unloads (the implementer calls <see cref="ClearPlacementProvider"/> on teardown). Readers
+        /// (e.g. the UI mode switcher) should treat a null provider as "placement not available yet"
+        /// and fall back to the 3D viewer affordance.
+        /// </summary>
+        public IPlacementProvider PlacementProvider => _placementProvider;
 
         /// <summary>
         /// Registers a Core service under whichever known interface(s) it implements.
@@ -75,6 +84,10 @@ namespace AnatomiQ.Core
                 case IArTrackingProvider arTracking:
                     WarnIfReplacing(_arTracking, nameof(IArTrackingProvider));
                     _arTracking = arTracking;
+                    break;
+                case IPlacementProvider placement:
+                    WarnIfReplacing(_placementProvider, nameof(IPlacementProvider));
+                    _placementProvider = placement;
                     break;
                 default:
                     Debug.LogWarning(
@@ -116,6 +129,21 @@ namespace AnatomiQ.Core
             }
         }
 
+        /// <summary>
+        /// Clears the registered placement provider (ATLAS-003) IF it is still the given instance.
+        /// Called by the placement controller from OnDestroy when its AR scene unloads. Same
+        /// identity-checked, sub-session-lifecycle rationale as <see cref="ClearArTrackingProvider"/>:
+        /// a torn-down controller must not wipe a newer one that already re-registered.
+        /// </summary>
+        /// <param name="provider">The provider that is tearing down.</param>
+        public void ClearPlacementProvider(IPlacementProvider provider)
+        {
+            if (_placementProvider == provider)
+            {
+                _placementProvider = null;
+            }
+        }
+
         /// <summary>Clears all registered services so stale scene refs never leak between play sessions.</summary>
         public void Clear()
         {
@@ -124,6 +152,7 @@ namespace AnatomiQ.Core
             _bodyRenderer = null;
             _dataLayer = null;
             _arTracking = null;
+            _placementProvider = null;
         }
 
         private static void WarnIfReplacing(object existing, string interfaceName)

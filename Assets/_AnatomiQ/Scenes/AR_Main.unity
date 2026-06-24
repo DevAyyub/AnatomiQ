@@ -144,7 +144,7 @@ Transform:
   m_GameObject: {fileID: 201140442}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -2, z: 2}
+  m_LocalPosition: {x: 0, y: -1.5, z: 2}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -288,6 +288,7 @@ GameObject:
   m_Component:
   - component: {fileID: 458936976}
   - component: {fileID: 458936975}
+  - component: {fileID: 458936979}
   - component: {fileID: 458936978}
   - component: {fileID: 458936977}
   m_Layer: 0
@@ -339,6 +340,22 @@ MonoBehaviour:
   m_GameObject: {fileID: 458936974}
   m_Enabled: 1
   m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fa17d122634046b4a8e23048891fafc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.XR.ARFoundation::UnityEngine.XR.ARFoundation.ARRaycastManager
+  <trackablesChanged>k__BackingField:
+    m_PersistentCalls:
+      m_Calls: []
+  m_RaycastPrefab: {fileID: 0}
+--- !u!114 &458936978
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 458936974}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 728ad7fae8e460a4ba41265c7308d757, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.XR.ARFoundation::UnityEngine.XR.ARFoundation.ARAnchorManager
@@ -346,7 +363,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   m_AnchorPrefab: {fileID: 0}
---- !u!114 &458936978
+--- !u!114 &458936979
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -362,7 +379,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   m_PlanePrefab: {fileID: 0}
-  m_DetectionMode: -1
+  m_DetectionMode: 1
 --- !u!1 &801770737
 GameObject:
   m_ObjectHideFlags: 0
@@ -377,6 +394,8 @@ GameObject:
   - component: {fileID: 801770741}
   - component: {fileID: 801770742}
   - component: {fileID: 801770743}
+  - component: {fileID: 801770744}
+  - component: {fileID: 801770745}
   m_Layer: 0
   m_Name: AppCore
   m_TagString: Untagged
@@ -443,8 +462,8 @@ MonoBehaviour:
   _services: {fileID: 11400000, guid: 245bc1958fd39094aaa278ddd821c09b, type: 2}
   _session: {fileID: 2098502737}
   _xrOrigin: {fileID: 458936975}
-  _planeManager: {fileID: 458936978}
-  _anchorManager: {fileID: 458936977}
+  _planeManager: {fileID: 458936979}
+  _anchorManager: {fileID: 458936978}
   _attemptInstallIfNeeded: 1
 --- !u!114 &801770742
 MonoBehaviour:
@@ -490,6 +509,37 @@ MonoBehaviour:
   m_EditorClassIdentifier: AnatomiQ.UI::AnatomiQ.UI.PerformanceOverlay
   _services: {fileID: 11400000, guid: 245bc1958fd39094aaa278ddd821c09b, type: 2}
   _startVisible: 1
+--- !u!114 &801770744
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 801770737}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ee322f0ee26c485428e3ab4d9745db92, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AnatomiQ.AR::AnatomiQ.AR.PlacementController
+  _services: {fileID: 11400000, guid: 245bc1958fd39094aaa278ddd821c09b, type: 2}
+  _arSession: {fileID: 801770741}
+  _arCamera: {fileID: 1120647424}
+  _planeManager: {fileID: 458936979}
+  _raycastManager: {fileID: 458936977}
+  _spaceDistance: 2
+--- !u!114 &801770745
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 801770737}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 50b649af4d90e9d408023f87a02dd832, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AnatomiQ.UI::AnatomiQ.UI.ArStateReadout
+  _services: {fileID: 11400000, guid: 245bc1958fd39094aaa278ddd821c09b, type: 2}
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
