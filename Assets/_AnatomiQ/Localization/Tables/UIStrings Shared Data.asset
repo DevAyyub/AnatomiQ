@@ -27,6 +27,50 @@ MonoBehaviour:
     m_Key: ui.system.thermal.critical
     m_Metadata:
       m_Items: []
+  - m_Id: 2051479407443968
+    m_Key: ui.placement.mode.viewer
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2051479432609792
+    m_Key: ui.placement.mode.space
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2051479432609793
+    m_Key: ui.placement.mode.surface
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2051479432609794
+    m_Key: ui.placement.enable_ar
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2051479432609795
+    m_Key: ui.placement.camera_rationale
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2051479432609796
+    m_Key: ui.placement.rationale.continue
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2051479432609797
+    m_Key: ui.placement.rationale.cancel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2051479432609798
+    m_Key: ui.placement.entering_ar
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2051479432609799
+    m_Key: ui.ar.tracking_lost
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2051479432609800
+    m_Key: ui.ar.camera_denied
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2051479432609801
+    m_Key: ui.ar.unsupported
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

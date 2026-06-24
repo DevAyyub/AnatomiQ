@@ -144,7 +144,7 @@ Transform:
   m_GameObject: {fileID: 201140442}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -1.5, z: 2}
+  m_LocalPosition: {x: 0, y: -2, z: 2}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -397,6 +397,8 @@ GameObject:
   - component: {fileID: 801770744}
   - component: {fileID: 801770745}
   - component: {fileID: 801770746}
+  - component: {fileID: 801770748}
+  - component: {fileID: 801770747}
   m_Layer: 0
   m_Name: AppCore
   m_TagString: Untagged
@@ -465,7 +467,12 @@ MonoBehaviour:
   _xrOrigin: {fileID: 458936975}
   _planeManager: {fileID: 458936979}
   _anchorManager: {fileID: 458936978}
+  _arCamera: {fileID: 1120647424}
+  _cameraBackground: {fileID: 1120647421}
+  _trackedPoseDriver: {fileID: 1120647420}
+  _viewerBackdropColor: {r: 0.06, g: 0.07, b: 0.1, a: 1}
   _attemptInstallIfNeeded: 1
+  _enterArOnStart: 0
 --- !u!114 &801770742
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -531,6 +538,7 @@ MonoBehaviour:
   _surfaceStableDwell: 0.6
   _surfaceSeekTimeout: 5
   _reticlePrefab: {fileID: 0}
+  _arEntryTimeout: 12
 --- !u!114 &801770745
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -562,6 +570,33 @@ MonoBehaviour:
   _maxScaleFactor: 3
   _rotateDegreesPerPixel: 0.2
   _panMetresPerPixel: 0.002
+--- !u!114 &801770747
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 801770737}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 93c7b5426a438144d947768435d6da22, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AnatomiQ.UI::AnatomiQ.UI.TrackingLostToast
+  _services: {fileID: 11400000, guid: 245bc1958fd39094aaa278ddd821c09b, type: 2}
+  _fadeSeconds: 0.25
+--- !u!114 &801770748
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 801770737}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d9269624eb40bad469581f00964dd1cb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AnatomiQ.UI::AnatomiQ.UI.PlacementModeSwitcher
+  _services: {fileID: 11400000, guid: 245bc1958fd39094aaa278ddd821c09b, type: 2}
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0

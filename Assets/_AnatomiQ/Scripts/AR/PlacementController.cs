@@ -22,7 +22,9 @@ namespace AnatomiQ.AR
     ///   <see cref="ARSessionManager.RemoveContentAnchor"/> rather than owning an
     ///   <see cref="ARAnchorManager"/>, so all anchor lifecycle routes through the session manager
     ///   ("all AR state changes through ARSessionManager only"). The plane + raycast managers, by
-    ///   contrast, are placement-owned and live here.
+    ///   contrast, are placement-owned and live here. SESSION lifecycle + camera presentation also stay
+    ///   in CORE-001: chunk 5 drives them through <see cref="ARSessionManager.EnterAr"/> /
+    ///   <see cref="ARSessionManager.ExitToViewer"/> rather than touching ARSession directly.
     /// • It NEVER writes the global <see cref="AppState"/> (CORE-007 is the sole writer); it SUBSCRIBES
     ///   to AppState and reconciles its own <see cref="PlacementMode"/> against it (chunk 5).
     ///
@@ -39,9 +41,17 @@ namespace AnatomiQ.AR
     /// CORE-004 organ selection per the D.1 gesture contract). If no stable surface is found within the
     /// timeout, it auto-falls back to Space placement (ATLAS-003 spec: surface &gt;5s → offer Space).
     /// The pose geometry for both modes lives in <see cref="PlacementMath"/> (Core), unit-testable
-    /// without the AR pillar. Viewer rendering + gestures (chunk 4) and the AppState/permission
-    /// reconciliation (chunk 5) are still to come; Viewer here is only a safe parking state for the
-    /// fallback — it flips the mode and detaches the body so nothing is orphaned.
+    /// without the AR pillar.
+    ///
+    /// CHUNK 5 adds the AppState/permission reconciliation. It SUBSCRIBES to
+    /// <see cref="IFallbackManager.OnAppStateChanged"/> and reacts: AR_VIEWER_MODE → force Viewer;
+    /// AR_LIMITED → screen-lock the body (freeze + lock-to-screen-centre, C.6) and suspend seeking;
+    /// AR_ACTIVE → AR available (consume any pending request / re-anchor after recovery). A user/UI
+    /// <see cref="RequestMode"/> for an AR mode while AR is not active triggers the D.4 flow: it calls
+    /// <see cref="ARSessionManager.EnterAr"/> (which raises the OS camera prompt — never at launch) and
+    /// defers the actual placement until AppState reaches AR_ACTIVE. Arbitration is the pure, unit-tested
+    /// <see cref="PlacementPolicy"/> (Core). Viewer presentation (camera backdrop, no pose-driven camera)
+    /// is delegated to CORE-001's <see cref="ARSessionManager.ExitToViewer"/>.
     /// </summary>
     [DefaultExecutionOrder(-850)] // After ARSessionManager (-900) registers; before AppBootstrap (-500).
     public sealed class PlacementController : MonoBehaviour, IPlacementProvider
@@ -51,7 +61,7 @@ namespace AnatomiQ.AR
         [SerializeField] private ServiceRegistry _services;
 
         [Header("CORE-001 session (same AR pillar — the anchor primitive lives here)")]
-        [Tooltip("The AR session manager whose async anchor seam this controller calls when placing.")]
+        [Tooltip("The AR session manager whose async anchor seam + EnterAr/ExitToViewer this controller calls.")]
         [SerializeField] private ARSessionManager _arSession;
 
         [Tooltip("The AR camera under XR Origin. Placement poses are computed relative to this transform.")]
@@ -69,6 +79,12 @@ namespace AnatomiQ.AR
         [Range(0.5f, 5f)]
         [SerializeField] private float _spaceDistance = 2.0f;
 
+        [Tooltip("Viewer / screen-lock only: extra vertical nudge (metres, + = up) applied AFTER the body is " +
+                 "centred on the camera sight-line. 0 centres the whole figure; raise slightly if you want " +
+                 "the head higher in frame. Does not affect anchored AR (Surface/Space) placement.")]
+        [Range(-1f, 1f)]
+        [SerializeField] private float _viewerVerticalOffset = 0f;
+
         [Header("Surface placement (chunk 3)")]
         [Tooltip("Seconds the screen-centre ray must hold on the SAME plane before the body auto-places. " +
                  "Avoids placing on a flickering first detection.")]
@@ -84,6 +100,12 @@ namespace AnatomiQ.AR
                  "a simple procedural disc is used so the reticle is never invisible.")]
         [SerializeField] private GameObject _reticlePrefab;
 
+        [Header("AR entry (chunk 5 — D.4)")]
+        [Tooltip("Seconds to wait for the AR session to start tracking after the user taps an AR mode " +
+                 "before giving up and returning to Viewer (covers denial / unsupported / stalled bring-up).")]
+        [Range(3f, 30f)]
+        [SerializeField] private float _arEntryTimeout = 12f;
+
         // Radius (metres) of the dev-grade procedural reticle used when no prefab is assigned.
         private const float RETICLE_DISC_RADIUS = 0.075f;
 
@@ -98,6 +120,14 @@ namespace AnatomiQ.AR
         private float _stableDwell;
         private TrackableId _lastHitTrackable = TrackableId.invalidId;
         private GameObject _reticle;
+
+        // AppState reconciliation state (chunk 5).
+        private IFallbackManager _fallback;       // cached subscription target
+        private AppState _appState = AppState.AR_VIEWER_MODE;
+        private bool _trackingLocked;             // AR_LIMITED → body screen-pinned, seeking suspended
+        private bool _resummonOnRecovery;         // re-anchor in Space once tracking returns
+        private PlacementMode? _pendingArMode;    // an AR mode requested while AR was not yet active
+        private float _pendingDeadline;           // watchdog time for the pending AR entry
 
         /// <inheritdoc />
         public PlacementMode CurrentMode => _mode;
@@ -124,8 +154,30 @@ namespace AnatomiQ.AR
             }
         }
 
+        private void Start()
+        {
+            // Subscribe AFTER all Awakes (FallbackManager registers first at -1000), then sync to the
+            // current AppState — which is AR_VIEWER_MODE at launch (D.4), so this frames the body in Viewer.
+            _fallback = _services != null ? _services.FallbackManager : null;
+            if (_fallback != null)
+            {
+                _fallback.OnAppStateChanged += HandleAppStateChanged;
+                HandleAppStateChanged(_fallback.CurrentState);
+            }
+            else
+            {
+                Debug.LogWarning("[PlacementController] FallbackManager unavailable; AppState reconciliation off.");
+                EnterViewer(); // safe baseline regardless
+            }
+        }
+
         private void OnDestroy()
         {
+            if (_fallback != null)
+            {
+                _fallback.OnAppStateChanged -= HandleAppStateChanged;
+            }
+
             if (_reticle != null)
             {
                 Destroy(_reticle);
@@ -141,6 +193,21 @@ namespace AnatomiQ.AR
 
         private void Update()
         {
+            // Watchdog: an AR entry that never reaches AR_ACTIVE (permission denied / unsupported /
+            // stalled bring-up) returns to Viewer so the user is never stuck "entering AR".
+            if (_pendingArMode.HasValue && Time.time >= _pendingDeadline)
+            {
+                Debug.LogWarning("[PlacementController] AR entry timed out; returning to Viewer.");
+                ResolvePendingFailure();
+            }
+
+            if (_trackingLocked)
+            {
+                // C.6 + CORE-001 LockToScreenCenter hint: keep the body usable through degraded tracking.
+                LockBodyToScreenCenter();
+                return; // suspend surface-seek while tracking is degraded
+            }
+
             if (_seekingSurface)
             {
                 TickSurfaceSeek();
@@ -150,25 +217,172 @@ namespace AnatomiQ.AR
         /// <inheritdoc />
         public void RequestMode(PlacementMode mode)
         {
-            // CHUNK 3: all three modes are live. AppState arbitration and the D.4 permission flow
-            // (decline AR while AR_VIEWER_MODE, prompt before entering AR) land in chunk 5 — for now a
-            // request that can't anchor degrades through the spec chain (surface → space → viewer),
-            // which is the safe outcome regardless.
-            switch (mode)
+            // Arbitrate the request against the current AppState (pure Core logic, unit-tested).
+            switch (PlacementPolicy.ResolveRequest(mode, _appState))
             {
-                case PlacementMode.Surface:
-                    BeginSurfaceSeek();
-                    break;
-                case PlacementMode.Space:
-                    EndSurfaceSeek(); // cancel any in-progress surface seek before re-placing
-                    _ = PlaceInSpaceAsync(); // fire-and-forget; all faults handled inside
-                    break;
-                case PlacementMode.Viewer:
-                    EndSurfaceSeek();
+                case PlacementAction.ForceViewer:
                     EnterViewer();
+                    break;
+
+                case PlacementAction.PlaceNow:
+                    PlaceForMode(mode);
+                    break;
+
+                case PlacementAction.EnterArThenPlace:
+                    // D.4: bring the session up now (this is when ARCore raises the OS camera prompt).
+                    // The actual placement waits for CORE-007 to promote AppState to AR_ACTIVE — see
+                    // HandleAppStateChanged. The UI shows the one-sentence rationale BEFORE calling here.
+                    _pendingArMode = mode;
+                    _pendingDeadline = Time.time + _arEntryTimeout;
+                    _arSession?.EnterAr();
                     break;
             }
         }
+
+        /// <summary>Places the body in the requested AR mode immediately (AR is already active).</summary>
+        private void PlaceForMode(PlacementMode mode)
+        {
+            if (mode == PlacementMode.Surface)
+            {
+                BeginSurfaceSeek();
+            }
+            else
+            {
+                EndSurfaceSeek(); // cancel any in-progress surface seek before re-placing
+                _ = PlaceInSpaceAsync();
+            }
+        }
+
+        // ── AppState reconciliation (chunk 5) ─────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Reconciles the controller's placement state against CORE-007's global <see cref="AppState"/>
+        /// (the single AppState writer). AR_ACTIVE consumes a pending AR request or re-anchors after a
+        /// tracking recovery; AR_LIMITED screen-locks the body; AR_VIEWER_MODE collapses to Viewer
+        /// UNLESS an AR entry is in flight (then it is just a transient bring-up step — wait, or bail if
+        /// CORE-001 reports the entry actually failed).
+        /// </summary>
+        /// <param name="state">The new global application state.</param>
+        private void HandleAppStateChanged(AppState state)
+        {
+            _appState = state;
+
+            switch (state)
+            {
+                case AppState.AR_ACTIVE:
+                    ExitTrackingLock();
+                    if (_pendingArMode.HasValue)
+                    {
+                        PlacementMode pending = _pendingArMode.Value;
+                        ClearPending();
+                        PlaceForMode(pending);
+                    }
+                    else if (_resummonOnRecovery)
+                    {
+                        _resummonOnRecovery = false;
+                        _ = PlaceInSpaceAsync(); // re-anchor after tracking recovered from a lock
+                    }
+                    break;
+
+                case AppState.AR_LIMITED:
+                    EnterTrackingLock();
+                    break;
+
+                case AppState.AR_VIEWER_MODE:
+                    if (_pendingArMode.HasValue)
+                    {
+                        // AR is either still initializing (wait) or has actually failed. AppState alone
+                        // can't tell these apart — read CORE-001's finer-grained status to bail early on
+                        // a genuine failure (permission denied / unsupported) rather than wait the watchdog.
+                        ArTrackingStatus status =
+                            _arSession != null ? _arSession.Status : ArTrackingStatus.Unavailable;
+                        if (status == ArTrackingStatus.PermissionDenied ||
+                            status == ArTrackingStatus.Unavailable)
+                        {
+                            ResolvePendingFailure();
+                        }
+                        // else Initializing: keep waiting; the watchdog still guards a stall.
+                    }
+                    else if (PlacementPolicy.ShouldCollapseToViewer(state, hasPendingArEntry: false))
+                    {
+                        ExitTrackingLock();
+                        EnterViewer();
+                    }
+                    break;
+            }
+        }
+
+        /// <summary>Begins the AR_LIMITED screen-lock: detach the body and pin it to the screen each frame.</summary>
+        private void EnterTrackingLock()
+        {
+            if (_trackingLocked)
+            {
+                return;
+            }
+
+            _trackingLocked = true;
+            _resummonOnRecovery = true; // re-anchor when tracking returns
+            EndSurfaceSeek();
+            _arSession?.RemoveContentAnchor(); // release the (now-unreliable) anchor
+            DetachBody();                       // keep world pose; LockBodyToScreenCenter takes over next frame
+        }
+
+        /// <summary>Ends the screen-lock (tracking recovered or we left AR). The re-anchor is handled by caller.</summary>
+        private void ExitTrackingLock() => _trackingLocked = false;
+
+        /// <summary>
+        /// Pins the body a fixed distance in front of the camera (screen-centre), recomputed each frame,
+        /// so it stays visible and usable while tracking is degraded/lost — even as the camera pose
+        /// jitters. Reuses the Space pose math. No-op if the body or camera is unavailable.
+        /// </summary>
+        private void LockBodyToScreenCenter()
+        {
+            IBodyModelRenderer renderer = _services != null ? _services.BodyRenderer : null;
+            if (renderer == null || renderer.ModelRoot == null || _arCamera == null)
+            {
+                return;
+            }
+
+            Transform cam = _arCamera.transform;
+            Pose pose = PlacementMath.ComputeSpacePose(cam.position, cam.rotation, _spaceDistance);
+            renderer.ModelRoot.SetPositionAndRotation(pose.position, pose.rotation);
+            AlignBodyVerticalCenter(renderer.ModelRoot, pose.position.y);
+        }
+
+        /// <summary>
+        /// Vertically centres the body on the camera sight-line. The model's pivot is at its feet, so
+        /// placing the pivot at the sight-line height pushes the head off the top of the screen — fine in
+        /// anchored AR where the user tilts the phone, but wrong for the fixed-camera Viewer / screen-lock.
+        /// This shifts the body so its rendered-bounds centre sits at <paramref name="targetWorldY"/>
+        /// (plus the optional <see cref="_viewerVerticalOffset"/> nudge), framing the whole figure. The
+        /// body is upright (yaw-only), so the vertical extent is orientation-stable. No-op if there are
+        /// no renderers yet (placeholder/not-ready) so framing degrades safely.
+        /// </summary>
+        private void AlignBodyVerticalCenter(Transform modelRoot, float targetWorldY)
+        {
+            var renderers = modelRoot.GetComponentsInChildren<Renderer>();
+            if (renderers.Length == 0)
+            {
+                return;
+            }
+
+            Bounds bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++)
+            {
+                bounds.Encapsulate(renderers[i].bounds);
+            }
+
+            float delta = (targetWorldY + _viewerVerticalOffset) - bounds.center.y;
+            modelRoot.position += new Vector3(0f, delta, 0f);
+        }
+        private void ResolvePendingFailure()
+        {
+            ClearPending();
+            ExitTrackingLock();
+            EnterViewer();
+        }
+
+        private void ClearPending() => _pendingArMode = null;
 
         // ── Space placement ─────────────────────────────────────────────────────────────────────────
 
@@ -431,19 +645,29 @@ namespace AnatomiQ.AR
         // ── Viewer fallback ─────────────────────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Enters Viewer mode directly (user/UI request): drop the anchor, frame the body in front of
-        /// the camera, flip mode. The camera/backdrop + session gating (D.4) land in chunk 5.
+        /// Enters Viewer mode deliberately (user/UI request, or AppState collapse to viewer): stop the
+        /// AR session + switch the camera to the non-AR backdrop (CORE-001 <see cref="ARSessionManager.ExitToViewer"/>,
+        /// chunk 5), drop the anchor, frame the body in front of the camera, flip mode. Clears any pending
+        /// AR entry and the tracking-lock.
         /// </summary>
         private void EnterViewer()
         {
-            _arSession?.RemoveContentAnchor();
+            ClearPending();
+            ExitTrackingLock();
+            EndSurfaceSeek();
+
+            _arSession?.RemoveContentAnchor(); // while the session is still up, so the op is valid
+            _arSession?.ExitToViewer();        // then stop the session + apply the Viewer backdrop
             FrameBodyForViewer();
             SetMode(PlacementMode.Viewer);
         }
 
         /// <summary>
-        /// Spec fallback "Space fails → auto Viewer". Same effect as <see cref="EnterViewer"/> but the
-        /// anchor (if any) is already gone or invalid by the time we get here.
+        /// Spec fallback "Space fails → auto Viewer" / placement-prerequisites missing. A LIGHT parking
+        /// state: it frames the body as Viewer and flips the mode, but does NOT tear the AR session down
+        /// (a fluke anchor miss while AR is healthy shouldn't kill the session — the user can retry an AR
+        /// mode instantly). A genuine AR-unavailable situation is handled by the AppState path, which
+        /// routes through <see cref="EnterViewer"/> and does stop the session.
         /// </summary>
         private void FallBackToViewer()
         {
@@ -471,11 +695,11 @@ namespace AnatomiQ.AR
             Transform cam = _arCamera.transform;
             Pose pose = PlacementMath.ComputeSpacePose(cam.position, cam.rotation, _spaceDistance);
             renderer.ModelRoot.SetPositionAndRotation(pose.position, pose.rotation);
+            AlignBodyVerticalCenter(renderer.ModelRoot, pose.position.y);
         }
 
         /// <summary>
         /// Detaches the body from any anchor, keeping its current world pose so it never vanishes.
-        /// Chunk 4 gives Viewer a deliberate non-AR position; this is just the safe interim.
         /// </summary>
         private void DetachBody()
         {

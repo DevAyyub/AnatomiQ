@@ -211,10 +211,11 @@
 6. **CORE-007 `CheckApiAvailability` / `CheckInferenceState` → at CORE-006 / on-device inference.** *(STILL OPEN)*
    Documented stubs; implemented when the AI Orchestrator and on-device inference exist.
 
-7. **Delete the temporary `ARStatusLogger` device probe.** *(IMMEDIATE)*
+7. **Delete the temporary `ARStatusLogger` device probe.** *(BATCHED → ATLAS-003 chunk 6)*
    `Scripts/AR/ARStatusLogger.cs` + its component on AppCore were only for CORE-001 device verification
-   (logged tracking/state/tier/FPS/temp to logcat). Remove both now that the pass is complete — it was
-   never meant to ship.
+   (logged tracking/state/tier/FPS/temp to logcat). Now folded into the ATLAS-003 chunk-6 cleanup pass
+   alongside undoing the CORE-002 `BodyRoot` +2 m test nudge and stripping the `DEV —` ContextMenu triggers
+   (PlacementController + BodyManipulator) — do them together before the chunk-6 device gate.
 
 ---
 
@@ -267,7 +268,21 @@ CORE-008 → CORE-007 → CORE-001 → CORE-002 → CORE-003 → CORE-004 → CO
   organ-ID → mesh-name map. **Open carry-forwards:** thermal user-warning string display (small UI consumer,
   → CORE-003/UI); real-heat tier demotion (→ CORE-005 cascade load); the `BodyRoot` +2 m test nudge to undo
   at ATLAS-003.
-- **CORE-003 (Layer Toggle System) — ⬅ NEXT.** Per build order; depends on CORE-002 rendering (now done).
+- **ATLAS-003 (AR Placement Modes) — 🟡 chunks 1–5 delivered (chunk 5 = 2026-06-24).** `PlacementController :
+  IPlacementProvider` owns Surface/Space/Viewer + the placement policy; `BodyManipulator` adds pinch/two-finger
+  gestures; geometry is pure Core (`PlacementMath`/`ManipulationMath`). Chunk 5 added AppState reconciliation
+  (subscribes to CORE-007's `OnAppStateChanged`, never writes it: AR_VIEWER_MODE→Viewer, AR_LIMITED→screen-pin
+  body + tracking-lost toast C.6, AR_ACTIVE→consume pending / re-anchor) arbitrated by the pure EditMode-tested
+  `PlacementPolicy`. **D.4 honored:** opens in 3D Viewer with NO launch camera prompt — session gating +
+  Viewer↔AR camera presentation moved into CORE-001 (`ARSessionManager.EnterAr()`/`ExitToViewer()`,
+  `_enterArOnStart=false`), OS prompt on the AR-Mode tap, placement deferred behind AR bring-up + 12 s watchdog.
+  UI in `AnatomiQ.UI` (house style): `PlacementModeSwitcher` (segmented control + D.4 rationale +
+  `IArTrackingProvider.Status` explainer) + `TrackingLostToast` (non-modal fade); 11 UIStrings keys authored via
+  `PlacementStringsInstaller`. Chunks 1–2 device-verified; **chunks 3–5 await developer ratification of the
+  CORE-001 edit (decisions 15–16) + a device pass.** Asmdef TODO: `Unity.Localization`→`AnatomiQ.UI`,
+  `Unity.InputSystem`→`AnatomiQ.AR`. Chunk 6 cleanup pending (undo CORE-002 `BodyRoot` nudge, delete
+  `ARStatusLogger`, strip `DEV —` triggers, PlayMode tests, device gate).
+- **CORE-003 (Layer Toggle System) — ⬅ NEXT in build order.** Per build order; depends on CORE-002 rendering (now done).
   New surface needed on `IBodyModelRenderer` (show/hide layers) — the minimal-interface decision (A) means
   it grows here, with CORE-003 as the first caller. The 7-mesh name list above is the seed.
 
