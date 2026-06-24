@@ -1,7 +1,13 @@
 {
     "name": "AnatomiQ.AR",
     "rootNamespace": "AnatomiQ.AR",
-    "references": ["AnatomiQ.Core", "Unity.XR.ARFoundation", "Unity.XR.ARSubsystems", "Unity.XR.CoreUtils"],
+    "references": [
+        "AnatomiQ.Core",
+        "Unity.XR.ARFoundation",
+        "Unity.XR.ARSubsystems",
+        "Unity.XR.CoreUtils",
+        "Unity.InputSystem"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

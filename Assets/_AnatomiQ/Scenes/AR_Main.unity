@@ -396,6 +396,7 @@ GameObject:
   - component: {fileID: 801770743}
   - component: {fileID: 801770744}
   - component: {fileID: 801770745}
+  - component: {fileID: 801770746}
   m_Layer: 0
   m_Name: AppCore
   m_TagString: Untagged
@@ -527,6 +528,9 @@ MonoBehaviour:
   _planeManager: {fileID: 458936979}
   _raycastManager: {fileID: 458936977}
   _spaceDistance: 2
+  _surfaceStableDwell: 0.6
+  _surfaceSeekTimeout: 5
+  _reticlePrefab: {fileID: 0}
 --- !u!114 &801770745
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -540,6 +544,24 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: AnatomiQ.UI::AnatomiQ.UI.ArStateReadout
   _services: {fileID: 11400000, guid: 245bc1958fd39094aaa278ddd821c09b, type: 2}
+--- !u!114 &801770746
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 801770737}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c504a30e5c959a3469bf55a44521e620, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AnatomiQ.AR::AnatomiQ.AR.BodyManipulator
+  _services: {fileID: 11400000, guid: 245bc1958fd39094aaa278ddd821c09b, type: 2}
+  _camera: {fileID: 1120647424}
+  _minScaleFactor: 0.4
+  _maxScaleFactor: 3
+  _rotateDegreesPerPixel: 0.2
+  _panMetresPerPixel: 0.002
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
